@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cài Đặt & Lịch Sử Mực Nước</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --safe: #22c55e;
+    --warn: #eab308;
+    --danger: #ef4444;
+    --accent: #38bdf8;
+    --bg: #090e17;
+    --bg-glow: #1e293b;
+    --card: #131c2e;
+    --card-inner: #0b1322;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: rgba(255, 255, 255, 0.08);
+    --scrollbar: rgba(255, 255, 255, 0.15);
+    --shadow-lg: rgba(0, 0, 0, 0.6);
+    --shadow-md: rgba(0, 0, 0, 0.45);
+    --shadow-xl: rgba(0, 0, 0, 0.7);
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    color-scheme: dark;
+  }
+
+  :root[data-theme="light"] {
+    --safe: #16a34a;
+    --warn: #ca8a04;
+    --danger: #dc2626;
+    --accent: #0284c7;
+    --bg: #dceefc;
+    --bg-glow: #f3fbff;
+    --card: #ffffff;
+    --card-inner: #eaf5fd;
+    --text: #0f2438;
+    --muted: #5b7791;
+    --border: rgba(14, 116, 189, 0.14);
+    --scrollbar: rgba(14, 116, 189, 0.22);
+    --shadow-lg: rgba(14, 116, 189, 0.16);
+    --shadow-md: rgba(14, 116, 189, 0.14);
+    --shadow-xl: rgba(14, 116, 189, 0.2);
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235b7791' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    background: radial-gradient(circle at 50% 0%, var(--bg-glow) 0%, var(--bg) 80%);
+    background-attachment: fixed;
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    transition: background 0.4s ease, color 0.4s ease;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; }
+  * { scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
+
+  .dashboard {
+    width: 100%;
+    max-width: 1280px;
+    height: 100%;
+    max-height: calc(100dvh - 24px);
+    background: var(--card);
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    box-shadow: 0 16px 40px var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 14px;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+  }
+  .header h1 {
+    font-size: clamp(1rem, 4vw, 1.3rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .header-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .conn-badge { font-size: 0.75rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
+
+  .theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--card-inner);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  }
+  .theme-toggle-btn svg { width: 17px; height: 17px; }
+  .theme-toggle-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+  .theme-toggle-btn:active { transform: scale(0.9); }
+  .theme-toggle-btn .icon-sun { display: none; }
+  :root[data-theme="light"] .theme-toggle-btn .icon-moon { display: none; }
+  :root[data-theme="light"] .theme-toggle-btn .icon-sun { display: block; }
+
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card-inner);
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 8px;
+  }
+  .nav-link:hover { border-color: rgba(255,255,255,0.18); }
+  .nav-link svg { width: 15px; height: 15px; }
+
+  /* ---- Two column layout ---- */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 270px 1fr;
+    gap: 14px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .control-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    padding-right: 4px;
+    min-height: 0;
+  }
+
+  .info-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .panel {
+    background: var(--card-inner);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .panel-title svg { width: 14px; height: 14px; }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
+
+  .ip-config { display: flex; flex-direction: column; gap: 8px; }
+  .ip-config input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.78rem;
+    padding: 8px 10px;
+    border-radius: 8px;
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+  .ip-config input:focus { outline: 1px solid var(--accent); }
+  .ip-config button {
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+  }
+  .ip-config button:hover { background: rgba(56, 189, 248, 0.25); }
+
+  .threshold-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .threshold-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .threshold-row label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text);
+  }
+  .threshold-input-wrap { display: flex; align-items: center; gap: 5px; }
+  .threshold-input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.8rem;
+    padding: 6px 8px;
+    border-radius: 8px;
+    width: 68px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .threshold-input:focus { outline: 1px solid var(--accent); }
+  .threshold-unit { font-size: 0.7rem; color: var(--muted); }
+
+  /* Hide native number input spin arrows everywhere */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+  .threshold-hint { font-size: 0.68rem; color: var(--muted); line-height: 1.5; }
+  .threshold-status { font-size: 0.7rem; font-weight: 600; min-height: 14px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 9px;
+    padding: 9px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-full { width: 100%; }
+  .btn-excel { background: var(--safe); color: #06210f; }
+  .btn-excel:hover { opacity: 0.88; }
+  .btn-accent { background: rgba(56,189,248,0.15); color: var(--accent); border: 1px solid rgba(56,189,248,0.35); }
+  .btn-accent:hover { background: rgba(56,189,248,0.25); }
+  .btn-refresh { background: rgba(56,189,248,0.15); color: var(--accent); border: 1px solid rgba(56,189,248,0.35); }
+  .btn-refresh:hover { background: rgba(56,189,248,0.25); }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.35); }
+  .btn-danger:hover { background: rgba(239,68,68,0.25); }
+  .btn svg { width: 15px; height: 15px; }
+
+  /* ---- Custom dropdown styling (shared by all selects) ---- */
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: var(--chevron);
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 13px;
+    padding-right: 30px;
+    cursor: pointer;
+  }
+  select::-ms-expand { display: none; }
+
+  .filter-select, .filter-input {
+    background: var(--card-inner);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.78rem;
+    padding: 7px 10px;
+    border-radius: 8px;
+  }
+  .filter-select { background-color: var(--card-inner); }
+  .filter-select:focus, .filter-input:focus { outline: 1px solid var(--accent); }
+  .filter-select:hover { border-color: rgba(255,255,255,0.18); }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .summary-card {
+    background: var(--card-inner);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 14px;
+    text-align: center;
+  }
+  .summary-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .summary-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .toolbar-left {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    padding: 16px;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    width: 100%;
+    max-width: 380px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 20px 50px var(--shadow-xl);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .modal-title { font-size: 1rem; font-weight: 700; color: var(--danger); }
+  .modal-text { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+  .btn-ghost { background: var(--card-inner); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.18); }
+
+  .table-wrap {
+    background: var(--card-inner);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    overflow: auto;
+    flex: 1 1 auto;
+    min-height: 120px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--card-inner);
+    text-align: left;
+    padding: 10px 12px;
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .level-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .level-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  .empty-row td { text-align: center; color: var(--muted); padding: 26px 12px; }
+
+  .footer-note { font-size: 0.72rem; color: var(--muted); text-align: right; flex-shrink: 0; }
+
+  /* ---- OTA modal ---- */
+  .ota-drop {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 18px 10px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.76rem;
+    cursor: pointer;
+    transition: 0.2s ease;
+  }
+  .ota-drop.drag { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.06); }
+  .ota-drop input { display: none; }
+  .ota-modal-box { max-width: 460px; max-height: 82vh; overflow-y: auto; }
+  .ota-field { background: var(--card-inner); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 10px; border-radius: 8px; font-size: 0.8rem; width: 100%; font-family: inherit; }
+  .ota-progress { height: 6px; background: var(--card-inner); border-radius: 99px; overflow: hidden; display: none; }
+  .ota-progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
+  .ota-status-line { font-size: 0.74rem; color: var(--muted); text-align: center; }
+  .ota-list { display: flex; flex-direction: column; gap: 8px; }
+  .ota-item { background: var(--card-inner); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .ota-item.active { border-color: var(--safe); }
+  .ota-item-top { display: flex; justify-content: space-between; align-items: center; }
+  .ota-version { font-weight: 700; font-size: 0.86rem; }
+  .ota-badge { font-size: 0.62rem; background: var(--safe); color: #06210f; border-radius: 6px; padding: 2px 6px; font-weight: 700; }
+  .ota-note { font-size: 0.74rem; color: var(--muted); }
+  .ota-meta { font-size: 0.66rem; color: var(--muted); opacity: 0.8; }
+  .ota-item-actions { display: flex; gap: 6px; margin-top: 4px; }
+  .ota-item-actions button { flex: 1; border: none; border-radius: 6px; padding: 6px 8px; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+  .ota-btn-activate { background: rgba(56,189,248,0.18); color: var(--accent); }
+  .ota-btn-rollback { background: rgba(234,179,8,0.18); color: var(--warn); }
+  .ota-btn-delete { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+  @media (max-width: 760px) {
+    .main-grid { grid-template-columns: 1fr; overflow-y: auto; }
+    .control-col { overflow-y: visible; padding-right: 0; }
+    .info-col { min-height: 420px; }
+  }
+
+  @media (max-width: 380px) {
+    .header h1 { font-size: 1rem; }
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .toolbar-left { flex-direction: column; align-items: stretch; }
+  }
+
+
+/* ===== Shared navigation + responsive refinement ===== */
+html {
+  background: var(--bg);
+}
+body {
+  animation: pageEnter .34s cubic-bezier(.22,.8,.22,1);
+}
+body.page-leaving {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.nav-link {
+  min-height: 34px;
+  transition: transform .16s ease, border-color .2s ease, background .2s ease;
+}
+.nav-link:hover { transform: translateY(-1px); }
+.nav-link:active { transform: scale(.96); }
+.nav-link svg { flex-shrink: 0; }
+
+@media (max-width: 760px) {
+  body { padding: 0; }
+  .dashboard {
+    min-height: 100dvh;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    box-shadow: none;
+    padding: 14px;
+  }
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--card) 94%, transparent);
+    backdrop-filter: blur(14px);
+  }
+  .header-status {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+  }
+  .conn-badge {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav-link {
+    padding: 7px 9px;
+  }
+  .nav-link span {
+    display: none;
+  }
+  .ip-config {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-left: 0;
+  }
+  .ip-config input { min-width: 0; flex: 1; }
+}
+
+/* Settings-specific information architecture */
+.main-grid {
+  grid-template-columns: minmax(300px, .82fr) minmax(0, 1.9fr);
+}
+.control-col {
+  background: color-mix(in srgb, var(--card-inner) 58%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  gap: 10px;
+}
+.control-col .panel {
+  border-radius: 11px;
+  padding: 12px;
+}
+.info-col {
+  background: color-mix(in srgb, var(--card-inner) 28%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+}
+.summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.summary-card { padding: 12px; }
+.toolbar {
+  background: var(--card-inner);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 9px;
+}
+.table-wrap { border-radius: 11px; }
+@media (max-width: 760px) {
+  html, body { height: auto; overflow: auto; }
+  .dashboard {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    gap: 12px;
+  }
+  .main-grid {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+  .control-col, .info-col {
+    overflow: visible;
+    min-height: 0;
+    padding: 10px;
+    border-radius: 14px;
+  }
+  .control-col { order: 1; }
+  .info-col { order: 2; }
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(96px, 1fr));
+    overflow-x: auto;
+  }
+  .summary-card { padding: 10px 6px; }
+  .summary-value { font-size: 1.15rem; }
+  .toolbar { align-items: stretch; }
+  .toolbar-left { width: 100%; }
+  .filter-select, .filter-input { flex: 1; min-width: 0; }
+  .table-wrap {
+    max-height: 52dvh;
+    min-height: 280px;
+  }
+  .footer-note { text-align: left; }
+}
+@media (max-width: 430px) {
+  .header-status { grid-template-columns: 1fr auto auto; }
+  .nav-link { width: 34px; justify-content: center; padding: 7px; }
+  .panel-title { font-size: .7rem; }
+  .threshold-row label { font-size: .72rem; }
+  .threshold-input { width: 62px; }
+}
+
+
+
+/* ===== OTA 2-COLUMN LAYOUT ===== */
+.ota-modal-box {
+  max-width: 920px;
+  width: 95vw;
+  height: 600px;
+  max-height: 88vh;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ota-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.ota-modal-body {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Cột Upload bên trái */
+.ota-upload-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: color-mix(in srgb, var(--card-inner) 60%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.ota-drop {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 14px 10px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.74rem;
+  cursor: pointer;
+  min-height: 80px;
+  display: grid;
+  place-items: center;
+  transition: 0.2s ease;
+}
+.ota-drop:hover, .ota-drop.drag {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(56,189,248,0.06);
+}
+.ota-drop input { display: none; }
+
+.ota-field {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  width: 100%;
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* Cột Danh sách bên phải */
+.ota-list-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ota-status-line {
+  font-size: 0.74rem;
+  color: var(--muted);
+  background: var(--card-inner);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.ota-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+  align-content: start;
+}
+
+.ota-item {
+  background: var(--card-inner);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 140px;
+  transition: transform .18s ease, border-color .2s ease;
+}
+.ota-item:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+.ota-item.active {
+  border-color: var(--safe);
+  box-shadow: inset 0 0 0 1px var(--safe);
+}
+.ota-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ota-version { font-weight: 700; font-size: 0.95rem; }
+.ota-badge {
+  font-size: 0.62rem;
+  background: var(--safe);
+  color: #06210f;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-weight: 700;
+}
+.ota-note {
+  font-size: 0.73rem;
+  color: var(--muted);
+  line-height: 1.4;
+  word-break: break-word;
+  flex: 1;
+}
+.ota-meta {
+  font-size: 0.65rem;
+  color: var(--muted);
+  opacity: 0.85;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+.ota-item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.ota-item-actions button {
+  flex: 1;
+  border: none;
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s ease;
+}
+.ota-item-actions button:hover { opacity: .85; }
+
+@media (max-width: 720px) {
+  .ota-modal-box {
+    height: 90vh;
+    padding: 14px;
+  }
+  .ota-modal-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  .ota-list-pane {
+    overflow: visible;
+  }
+  .ota-list {
+    overflow: visible;
+    grid-template-columns: 1fr;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+  <div class="header">
+    <h1>Cài Đặt &amp; Lịch Sử Mực Nước</h1>
+    <div class="header-status">
+      <div id="connStatus" class="conn-badge">Đang kết nối...</div>
+      <a class="nav-link page-link" href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"></path><path d="M5 10v10h14V10"></path></svg>
+        Bảng chính
+      </a>
+      <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Chuyển giao diện sáng/tối" title="Chuyển giao diện sáng/tối">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- ===== LEFT: CONTROL COLUMN ===== -->
+    <div class="control-col">
+
+      <div class="panel">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20l9-9-9-9-9 9 9 9z"></path></svg>
+          Kết nối Worker
+        </div>
+        <div class="ip-config">
+          <input type="text" id="workerUrlInput" placeholder="URL Cloudflare Worker">
+          <input type="password" id="deviceKeyInput" placeholder="Device Key">
+          <button id="workerUrlSaveBtn">Kết nối</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          Ngưỡng cảnh báo
+        </div>
+
+        <div class="threshold-row">
+          <label><span class="dot" style="background:var(--danger); box-shadow:0 0 6px var(--danger);"></span>Nguy hiểm ≤</label>
+          <div class="threshold-input-wrap">
+            <input type="number" id="thresholdDanger" class="threshold-input" step="1">
+            <span class="threshold-unit">cm</span>
+          </div>
+        </div>
+        <div class="threshold-row">
+          <label><span class="dot" style="background:var(--warn); box-shadow:0 0 6px var(--warn);"></span>Trung bình ≤</label>
+          <div class="threshold-input-wrap">
+            <input type="number" id="thresholdWarn" class="threshold-input" step="1">
+            <span class="threshold-unit">cm</span>
+          </div>
+        </div>
+        <div class="threshold-row">
+          <label><span class="dot" style="background:var(--accent); box-shadow:0 0 6px var(--accent);"></span>Phát hiện ≤</label>
+          <div class="threshold-input-wrap">
+            <input type="number" id="thresholdDetect" class="threshold-input" step="1">
+            <span class="threshold-unit">cm</span>
+          </div>
+        </div>
+
+        <div class="threshold-hint">Sau khi lưu, ESP32 sẽ tự động lấy ngưỡng mới trong vòng khoảng 30 giây (không cần nạp lại code).</div>
+        <div id="thresholdStatus" class="threshold-status"></div>
+        <button id="thresholdSaveBtn" class="btn btn-accent btn-full">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          Lưu ngưỡng
+        </button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Quản lý dữ liệu
+        </div>
+        <button id="exportBtn" class="btn btn-excel btn-full">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          Xuất Excel
+        </button>
+        <button id="deleteBtn" class="btn btn-danger btn-full">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Xoá dữ liệu
+        </button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.64"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
+          Firmware
+        </div>
+        <button id="otaOpenBtn" class="btn btn-accent btn-full">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Update OTA
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ===== RIGHT: INFO COLUMN ===== -->
+    <div class="info-col">
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">Tổng bản ghi</div>
+          <div id="sumCount" class="summary-value" style="color: var(--text);">--</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Mực nước mới nhất</div>
+          <div id="sumLatest" class="summary-value" style="color: var(--muted);">--</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Thấp nhất (24h)</div>
+          <div id="sumMin" class="summary-value" style="color: var(--danger);">--</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Cao nhất (24h)</div>
+          <div id="sumMax" class="summary-value" style="color: var(--safe);">--</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <select id="levelFilter" class="filter-select">
+            <option value="">Tất cả mức</option>
+            <option value="safe">An toàn</option>
+            <option value="detect">Phát hiện</option>
+            <option value="warn">Trung bình</option>
+            <option value="danger">Nguy hiểm</option>
+            <option value="error">Lỗi</option>
+          </select>
+          <input type="text" id="deviceFilter" class="filter-input" placeholder="Lọc theo device_id (vd: mahirun)">
+          <button id="refreshBtn" class="btn btn-refresh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            Làm mới
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Thời gian</th>
+              <th>Device ID</th>
+              <th>Khoảng cách (cm)</th>
+              <th>Tốc độ (cm/phút)</th>
+              <th>Mức cảnh báo</th>
+            </tr>
+          </thead>
+          <tbody id="dataBody">
+            <tr class="empty-row"><td colspan="5">Chưa có dữ liệu. Nhập URL Worker và bấm Kết nối.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer-note" id="lastFetch">Chưa tải dữ liệu.</div>
+    </div>
+  </div>
+</div>
+
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">Xoá dữ liệu trên D1?</div>
+    <div class="modal-text">
+      Thao tác này sẽ xoá vĩnh viễn dữ liệu trong bảng <strong>readings</strong> trên D1 và không thể hoàn tác.
+      Chọn phạm vi xoá bên dưới rồi xác nhận.
+    </div>
+    <select id="deleteScope" class="filter-select" style="width:100%;">
+      <option value="all">Xoá toàn bộ dữ liệu</option>
+      <option value="device">Chỉ xoá theo device_id đang lọc</option>
+    </select>
+    <div class="modal-actions">
+      <button id="deleteCancelBtn" class="btn btn-ghost">Huỷ</button>
+      <button id="deleteConfirmBtn" class="btn btn-danger">Xoá vĩnh viễn</button>
+    </div>
+  </div>
+</div>
+
+<div id="noticeModal" class="modal-overlay">
+  <div class="modal-box">
+    <div id="noticeTitle" class="modal-title">Thông báo</div>
+    <div id="noticeText" class="modal-text"></div>
+    <div class="modal-actions">
+      <button id="noticeOkBtn" class="btn btn-accent">Đã hiểu</button>
+    </div>
+  </div>
+</div>
+
+<div id="otaModal" class="modal-overlay">
+  <div class="modal-box ota-modal-box">
+    <div class="ota-modal-header">
+      <div class="modal-title" style="color:var(--text);">Quản lý OTA</div>
+      <button id="otaCloseBtn" class="btn btn-ghost" style="padding: 5px 12px; font-size: 0.75rem;">Đóng</button>
+    </div>
+
+    <div class="ota-modal-body">
+      <!-- Cột trái: Form upload gọn gàng -->
+      <div class="ota-upload-pane">
+        <div class="ota-drop" id="otaDrop">
+          Kéo thả file <strong>.bin</strong> hoặc bấm chọn
+          <input type="file" id="otaFile" accept=".bin">
+        </div>
+
+        <input type="text" id="otaVersion" class="ota-field" placeholder="Phiên bản (vd: 1.2.0)">
+        <textarea id="otaNote" class="ota-field" placeholder="Ghi chú cập nhật..." rows="3"></textarea>
+        
+        <div class="ota-progress" id="otaProgress"><div class="ota-progress-fill" id="otaProgressFill"></div></div>
+        <button id="otaUploadBtn" class="btn btn-excel btn-full" disabled>Tải lên</button>
+      </div>
+
+      <!-- Cột phải: Danh sách OTA dạng lưới cuộn riêng biệt -->
+      <div class="ota-list-pane">
+        <div class="ota-status-line" id="otaDeviceStatus">Đang tải danh sách...</div>
+        <div class="ota-list" id="otaList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const themeToggleBtnEl = document.getElementById("themeToggleBtn");
+  const savedTheme = localStorage.getItem("theme") ||
+    (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", savedTheme);
+  themeToggleBtnEl.addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+  });
+
+  const connStatusEl = document.getElementById("connStatus");
+  const workerUrlInputEl = document.getElementById("workerUrlInput");
+  const deviceKeyInputEl = document.getElementById("deviceKeyInput");
+  const workerUrlSaveBtnEl = document.getElementById("workerUrlSaveBtn");
+  const levelFilterEl = document.getElementById("levelFilter");
+  const deviceFilterEl = document.getElementById("deviceFilter");
+  const refreshBtnEl = document.getElementById("refreshBtn");
+  const exportBtnEl = document.getElementById("exportBtn");
+  const deleteBtnEl = document.getElementById("deleteBtn");
+  const deleteModalEl = document.getElementById("deleteModal");
+  const deleteScopeEl = document.getElementById("deleteScope");
+  const deleteCancelBtnEl = document.getElementById("deleteCancelBtn");
+  const deleteConfirmBtnEl = document.getElementById("deleteConfirmBtn");
+  const dataBodyEl = document.getElementById("dataBody");
+  const lastFetchEl = document.getElementById("lastFetch");
+  const sumCountEl = document.getElementById("sumCount");
+  const sumLatestEl = document.getElementById("sumLatest");
+  const sumMinEl = document.getElementById("sumMin");
+  const sumMaxEl = document.getElementById("sumMax");
+
+  const noticeModalEl = document.getElementById("noticeModal");
+  const noticeTitleEl = document.getElementById("noticeTitle");
+  const noticeTextEl = document.getElementById("noticeText");
+  const noticeOkBtnEl = document.getElementById("noticeOkBtn");
+
+  // Custom replacement for window.alert() so notifications match the
+  // dashboard's look instead of the browser's default popup.
+  function showNotice(title, message, type = "info") {
+    const color = type === "error" ? "var(--danger)" : type === "success" ? "var(--safe)" : "var(--accent)";
+    noticeTitleEl.textContent = title;
+    noticeTitleEl.style.color = color;
+    noticeTextEl.textContent = message;
+    noticeModalEl.classList.add("open");
+  }
+  noticeOkBtnEl.addEventListener("click", () => noticeModalEl.classList.remove("open"));
+  noticeModalEl.addEventListener("click", (e) => {
+    if (e.target === noticeModalEl) noticeModalEl.classList.remove("open");
+  });
+
+  const thresholdDangerEl = document.getElementById("thresholdDanger");
+  const thresholdWarnEl = document.getElementById("thresholdWarn");
+  const thresholdDetectEl = document.getElementById("thresholdDetect");
+  const thresholdSaveBtnEl = document.getElementById("thresholdSaveBtn");
+  const thresholdStatusEl = document.getElementById("thresholdStatus");
+
+  const LEVEL_META = {
+    safe:   { label: "An toàn",   color: "var(--safe)" },
+    detect: { label: "Phát hiện", color: "var(--warn)" },
+    warn:   { label: "Trung bình",color: "var(--warn)" },
+    danger: { label: "Nguy hiểm", color: "var(--danger)" },
+    error:  { label: "Lỗi",       color: "var(--muted)" }
+  };
+
+  let workerBaseUrl = localStorage.getItem("workerBaseUrl") || "https://waterlevelmonitor.luumanhkien08092006.workers.dev";
+  let deviceKey = localStorage.getItem("deviceKey") || "";
+  workerUrlInputEl.value = workerBaseUrl;
+  deviceKeyInputEl.value = deviceKey;
+
+  // ---- Threshold settings (local reference + logged to D1) ----
+  const DEFAULT_THRESHOLDS = { danger: 15, warn: 40, detect: 180 };
+  function loadThresholds() {
+    try {
+      const raw = JSON.parse(localStorage.getItem("alertThresholds"));
+      if (raw && typeof raw.danger === "number" && typeof raw.warn === "number" && typeof raw.detect === "number") return raw;
+    } catch (e) {}
+    return { ...DEFAULT_THRESHOLDS };
+  }
+  let thresholds = loadThresholds();
+  thresholdDangerEl.value = thresholds.danger;
+  thresholdWarnEl.value = thresholds.warn;
+  thresholdDetectEl.value = thresholds.detect;
+
+  thresholdSaveBtnEl.addEventListener("click", async () => {
+    const danger = parseFloat(thresholdDangerEl.value);
+    const warn = parseFloat(thresholdWarnEl.value);
+    const detect = parseFloat(thresholdDetectEl.value);
+
+    if (![danger, warn, detect].every(v => Number.isFinite(v) && v >= 0)) {
+      thresholdStatusEl.textContent = "Giá trị ngưỡng không hợp lệ.";
+      thresholdStatusEl.style.color = "var(--danger)";
+      return;
+    }
+    if (!(danger < warn && warn < detect)) {
+      thresholdStatusEl.textContent = "Cần đảm bảo: Nguy hiểm < Trung bình < Phát hiện.";
+      thresholdStatusEl.style.color = "var(--danger)";
+      return;
+    }
+
+    thresholds = { danger, warn, detect };
+    localStorage.setItem("alertThresholds", JSON.stringify(thresholds));
+    thresholdStatusEl.textContent = "Đã lưu ngưỡng cục bộ.";
+    thresholdStatusEl.style.color = "var(--safe)";
+
+    if (workerBaseUrl && deviceKey) {
+      thresholdSaveBtnEl.disabled = true;
+      try {
+        const res = await fetch(workerBaseUrl + "/setting-log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Device-Key": deviceKey },
+          body: JSON.stringify({ danger, warn, detect, deviceId: deviceFilterEl.value.trim() || "mahirun" })
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        thresholdStatusEl.textContent = "Đã lưu ngưỡng và ghi log lên máy chủ.";
+      } catch (e) {
+        thresholdStatusEl.textContent = "Đã lưu cục bộ, nhưng ghi log thất bại: " + e.message;
+        thresholdStatusEl.style.color = "var(--warn)";
+      } finally {
+        thresholdSaveBtnEl.disabled = false;
+      }
+    } else {
+      thresholdStatusEl.textContent += " (Nhập Worker URL + Device Key để đồng bộ log)";
+    }
+  });
+
+  let allRows = [];
+
+  function normalizeToUrl(raw) {
+    let v = raw.trim();
+    if (!v) return "";
+    if (!/^https?:\/\//i.test(v)) v = "https://" + v;
+    return v.replace(/\/+$/, "");
+  }
+
+  function formatTs(epoch) {
+    if (!epoch) return "--";
+    return new Date(epoch * 1000).toLocaleString("vi-VN");
+  }
+
+  function renderTable() {
+    const levelFilter = levelFilterEl.value;
+    const deviceFilter = deviceFilterEl.value.trim().toLowerCase();
+
+    const filtered = allRows.filter(r => {
+      if (levelFilter && r.level !== levelFilter) return false;
+      if (deviceFilter && !(r.device_id || "").toLowerCase().includes(deviceFilter)) return false;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      dataBodyEl.innerHTML = '<tr class="empty-row"><td colspan="5">Không có dữ liệu phù hợp.</td></tr>';
+    } else {
+      dataBodyEl.innerHTML = filtered.map(r => {
+        const meta = LEVEL_META[r.level] || { label: r.level || "--", color: "var(--muted)" };
+        return `
+          <tr>
+            <td>${formatTs(r.epoch)}</td>
+            <td>${r.device_id || "--"}</td>
+            <td>${r.distance ?? "--"}</td>
+            <td>${(r.rate ?? 0).toFixed ? r.rate.toFixed(2) : r.rate}</td>
+            <td>
+              <span class="level-pill" style="background:${meta.color}22; color:${meta.color};">
+                <span class="dot" style="background:${meta.color}; box-shadow:0 0 6px ${meta.color};"></span>
+                ${meta.label}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    sumCountEl.textContent = filtered.length;
+    if (filtered.length > 0) {
+      const latest = filtered[0];
+      const meta = LEVEL_META[latest.level] || { color: "var(--muted)" };
+      sumLatestEl.textContent = (latest.distance ?? "--") + " cm";
+      sumLatestEl.style.color = meta.color;
+
+      const distances = filtered.map(r => r.distance).filter(d => typeof d === "number" && d >= 0);
+      if (distances.length > 0) {
+        sumMinEl.textContent = Math.min(...distances) + " cm";
+        sumMaxEl.textContent = Math.max(...distances) + " cm";
+      }
+    } else {
+      sumLatestEl.textContent = "--";
+      sumMinEl.textContent = "--";
+      sumMaxEl.textContent = "--";
+    }
+  }
+
+  async function fetchData() {
+    if (!workerBaseUrl) return;
+    connStatusEl.textContent = "○ Đang tải...";
+    connStatusEl.style.color = "var(--warn)";
+    try {
+      const res = await fetch(workerBaseUrl + "/history-data", { cache: "no-store", mode: "cors" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const rows = await res.json();
+      allRows = Array.isArray(rows) ? rows : [];
+      connStatusEl.textContent = "● Online";
+      connStatusEl.style.color = "var(--safe)";
+      lastFetchEl.textContent = "Cập nhật lúc: " + new Date().toLocaleTimeString("vi-VN");
+      renderTable();
+    } catch (e) {
+      connStatusEl.textContent = "✕ Mất kết nối Worker";
+      connStatusEl.style.color = "var(--danger)";
+    }
+  }
+
+  workerUrlSaveBtnEl.addEventListener("click", () => {
+    const url = normalizeToUrl(workerUrlInputEl.value);
+    if (!url) return;
+    workerBaseUrl = url;
+    deviceKey = deviceKeyInputEl.value.trim();
+    localStorage.setItem("workerBaseUrl", workerBaseUrl);
+    localStorage.setItem("deviceKey", deviceKey);
+    fetchData();
+  });
+
+  workerUrlInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") workerUrlSaveBtnEl.click();
+  });
+
+  levelFilterEl.addEventListener("change", renderTable);
+  deviceFilterEl.addEventListener("input", renderTable);
+  refreshBtnEl.addEventListener("click", fetchData);
+
+  exportBtnEl.addEventListener("click", () => {
+    if (allRows.length === 0) {
+      showNotice("Không có dữ liệu", "Chưa có dữ liệu để xuất.", "error");
+      return;
+    }
+    const levelFilter = levelFilterEl.value;
+    const deviceFilter = deviceFilterEl.value.trim().toLowerCase();
+    const filtered = allRows.filter(r => {
+      if (levelFilter && r.level !== levelFilter) return false;
+      if (deviceFilter && !(r.device_id || "").toLowerCase().includes(deviceFilter)) return false;
+      return true;
+    });
+
+    const sheetData = filtered.map(r => ({
+      "Thời gian": formatTs(r.epoch),
+      "Device ID": r.device_id || "",
+      "Khoảng cách (cm)": r.distance,
+      "Tốc độ (cm/phút)": r.rate,
+      "Mức cảnh báo": (LEVEL_META[r.level] || {}).label || r.level
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(sheetData);
+    ws["!cols"] = [{ wch: 20 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "MucNuoc");
+
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    XLSX.writeFile(wb, `mucnuoc_ham_${stamp}.xlsx`);
+  });
+
+  deleteBtnEl.addEventListener("click", () => {
+    deleteModalEl.classList.add("open");
+  });
+  deleteCancelBtnEl.addEventListener("click", () => {
+    deleteModalEl.classList.remove("open");
+  });
+  deleteModalEl.addEventListener("click", (e) => {
+    if (e.target === deleteModalEl) deleteModalEl.classList.remove("open");
+  });
+
+  deleteConfirmBtnEl.addEventListener("click", async () => {
+    if (!workerBaseUrl) {
+      showNotice("Thiếu cấu hình", "Chưa có URL Worker.", "error");
+      return;
+    }
+    if (!deviceKey) {
+      showNotice("Thiếu Device Key", "Cần nhập Device Key để xác thực xoá dữ liệu.", "error");
+      return;
+    }
+    const scope = deleteScopeEl.value;
+    const deviceFilter = deviceFilterEl.value.trim();
+    const body = { scope };
+    if (scope === "device") {
+      if (!deviceFilter) {
+        showNotice("Thiếu device_id", "Hãy nhập device_id ở ô lọc trước khi chọn xoá theo device.", "error");
+        return;
+      }
+      body.deviceId = deviceFilter;
+    }
+
+    deleteConfirmBtnEl.disabled = true;
+    deleteConfirmBtnEl.textContent = "Đang xoá...";
+    try {
+      const res = await fetch(workerBaseUrl + "/clear-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Key": deviceKey
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      deleteModalEl.classList.remove("open");
+      await fetchData();
+      showNotice("Thành công", "Đã xoá dữ liệu thành công.", "success");
+    } catch (e) {
+      showNotice("Xoá thất bại", e.message, "error");
+    } finally {
+      deleteConfirmBtnEl.disabled = false;
+      deleteConfirmBtnEl.textContent = "Xoá vĩnh viễn";
+    }
+  });
+
+  fetchData();
+  setInterval(fetchData, 15000);
+
+  // ---- OTA management ----
+  const otaOpenBtnEl = document.getElementById("otaOpenBtn");
+  const otaModalEl = document.getElementById("otaModal");
+  const otaCloseBtnEl = document.getElementById("otaCloseBtn");
+  const otaDropEl = document.getElementById("otaDrop");
+  const otaFileEl = document.getElementById("otaFile");
+  const otaVersionEl = document.getElementById("otaVersion");
+  const otaNoteEl = document.getElementById("otaNote");
+  const otaUploadBtnEl = document.getElementById("otaUploadBtn");
+  const otaListEl = document.getElementById("otaList");
+  const otaDeviceStatusEl = document.getElementById("otaDeviceStatus");
+  const otaProgressEl = document.getElementById("otaProgress");
+  const otaProgressFillEl = document.getElementById("otaProgressFill");
+
+  let otaSelectedFile = null;
+
+  function otaDeviceId() {
+    return deviceFilterEl.value.trim() || "mahirun";
+  }
+
+  otaOpenBtnEl.addEventListener("click", () => {
+    if (!workerBaseUrl) {
+      showNotice("Thiếu cấu hình", "Nhập URL Worker và bấm Kết nối trước.", "error");
+      return;
+    }
+    otaModalEl.classList.add("open");
+    otaRefreshList();
+  });
+  otaCloseBtnEl.addEventListener("click", () => otaModalEl.classList.remove("open"));
+  otaModalEl.addEventListener("click", (e) => { if (e.target === otaModalEl) otaModalEl.classList.remove("open"); });
+
+  otaDropEl.addEventListener("click", () => otaFileEl.click());
+  ["dragenter", "dragover"].forEach(ev => otaDropEl.addEventListener(ev, e => {
+    e.preventDefault(); otaDropEl.classList.add("drag");
+  }));
+  ["dragleave", "drop"].forEach(ev => otaDropEl.addEventListener(ev, e => {
+    e.preventDefault(); otaDropEl.classList.remove("drag");
+  }));
+  otaDropEl.addEventListener("drop", e => {
+    const f = e.dataTransfer.files[0];
+    if (f) otaSetFile(f);
+  });
+  otaFileEl.addEventListener("change", () => {
+    if (otaFileEl.files[0]) otaSetFile(otaFileEl.files[0]);
+  });
+
+  function otaSetFile(f) {
+    if (!f.name.endsWith(".bin")) {
+      showNotice("File không hợp lệ", "Chỉ nhận file .bin.", "error");
+      return;
+    }
+    otaSelectedFile = f;
+    otaDropEl.textContent = `Đã chọn: ${f.name} (${(f.size / 1024).toFixed(1)} KB)`;
+    otaUploadBtnEl.disabled = !otaVersionEl.value.trim();
+  }
+  otaVersionEl.addEventListener("input", () => {
+    otaUploadBtnEl.disabled = !(otaSelectedFile && otaVersionEl.value.trim());
+  });
+
+  otaUploadBtnEl.addEventListener("click", async () => {
+    if (!otaSelectedFile || !otaVersionEl.value.trim()) return;
+    if (!deviceKey) {
+      showNotice("Thiếu Device Key", "Cần nhập Device Key ở panel Kết nối Worker để tải firmware lên.", "error");
+      return;
+    }
+    otaUploadBtnEl.disabled = true;
+    otaProgressEl.style.display = "block";
+    otaProgressFillEl.style.width = "15%";
+
+    const qs = new URLSearchParams({
+      version: otaVersionEl.value.trim(),
+      note: otaNoteEl.value.trim(),
+      deviceId: otaDeviceId()
+    });
+
+    try {
+      const res = await fetch(workerBaseUrl + "/ota/upload?" + qs, {
+        method: "POST",
+        headers: { "X-Device-Key": deviceKey, "Content-Type": "application/octet-stream" },
+        body: otaSelectedFile
+      });
+      otaProgressFillEl.style.width = "100%";
+      if (!res.ok) throw new Error(await res.text());
+      otaVersionEl.value = "";
+      otaNoteEl.value = "";
+      otaSelectedFile = null;
+      otaDropEl.textContent = "Kéo thả file .bin vào đây, hoặc bấm để chọn";
+      setTimeout(() => { otaProgressEl.style.display = "none"; otaProgressFillEl.style.width = "0%"; }, 500);
+      otaRefreshList();
+    } catch (e) {
+      showNotice("Tải lên thất bại", e.message, "error");
+      otaProgressEl.style.display = "none";
+    } finally {
+      otaUploadBtnEl.disabled = false;
+    }
+  });
+
+  async function otaRefreshList() {
+    otaListEl.innerHTML = '<div class="ota-status-line">Đang tải...</div>';
+    const deviceId = otaDeviceId();
+    try {
+      const [listRes, activeRes] = await Promise.all([
+        fetch(workerBaseUrl + "/ota/list?deviceId=" + encodeURIComponent(deviceId)),
+        fetch(workerBaseUrl + "/ota/active?deviceId=" + encodeURIComponent(deviceId))
+      ]);
+      const list = await listRes.json();
+      const active = await activeRes.json();
+
+      otaDeviceStatusEl.textContent = active.active
+        ? `Đang chạy bản active: ${active.version} (device: ${deviceId})`
+        : `Chưa có bản nào được activate (device: ${deviceId})`;
+
+      if (!Array.isArray(list) || list.length === 0) {
+        otaListEl.innerHTML = '<div class="ota-status-line">Chưa có firmware nào được tải lên cho device này</div>';
+        return;
+      }
+
+      const activeIdx = list.findIndex(x => x.is_active);
+      otaListEl.innerHTML = list.map((item, idx) => {
+        const isOlderThanActive = activeIdx >= 0 && idx > activeIdx;
+        return `
+        <div class="ota-item ${item.is_active ? "active" : ""}">
+          <div class="ota-item-top">
+            <span class="ota-version">${item.version}</span>
+            ${item.is_active ? '<span class="ota-badge">ACTIVE</span>' : ""}
+          </div>
+          ${item.note ? `<div class="ota-note">${otaEscape(item.note)}</div>` : ""}
+          <div class="ota-meta">${new Date(item.uploaded_at).toLocaleString("vi-VN")} · ${(item.size / 1024).toFixed(1)} KB</div>
+          ${item.is_active ? "" : `
+          <div class="ota-item-actions">
+            <button class="${isOlderThanActive ? "ota-btn-rollback" : "ota-btn-activate"}" data-act="${item.id}">
+              ${isOlderThanActive ? "Rollback về bản này" : "Đẩy lên chip"}
+            </button>
+            <button class="ota-btn-delete" data-del="${item.id}">Xoá</button>
+          </div>`}
+        </div>`;
+      }).join("");
+
+      otaListEl.querySelectorAll("[data-act]").forEach(btn => {
+        btn.addEventListener("click", () => otaActivate(btn.dataset.act));
+      });
+      otaListEl.querySelectorAll("[data-del]").forEach(btn => {
+        btn.addEventListener("click", () => otaDelete(btn.dataset.del));
+      });
+    } catch (e) {
+      otaListEl.innerHTML = '<div class="ota-status-line">Lỗi tải danh sách</div>';
+    }
+  }
+
+  async function otaActivate(id) {
+    if (!deviceKey) {
+      showNotice("Thiếu Device Key", "Cần nhập Device Key để đẩy firmware.", "error");
+      return;
+    }
+    try {
+      const res = await fetch(workerBaseUrl + "/ota/activate", {
+        method: "POST",
+        headers: { "X-Device-Key": deviceKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ id: Number(id), deviceId: otaDeviceId() })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      showNotice("Đã đẩy lên chip", "Chip sẽ tự tải và flash trong tối đa 20 giây tới.", "success");
+      otaRefreshList();
+    } catch (e) {
+      showNotice("Lỗi", e.message, "error");
+    }
+  }
+
+  async function otaDelete(id) {
+    if (!deviceKey) {
+      showNotice("Thiếu Device Key", "Cần nhập Device Key để xoá.", "error");
+      return;
+    }
+    try {
+      const res = await fetch(workerBaseUrl + "/ota/delete", {
+        method: "POST",
+        headers: { "X-Device-Key": deviceKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ id: Number(id), deviceId: otaDeviceId() })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      otaRefreshList();
+    } catch (e) {
+      showNotice("Lỗi", e.message, "error");
+    }
+  }
+
+  function otaEscape(s) {
+    return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+</script>
+
+<script>
+(() => {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('a.page-link[href]').forEach(link => {
+      link.addEventListener('click', (event) => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#')) return;
+        event.preventDefault();
+        document.body.classList.add('page-leaving');
+        setTimeout(() => { window.location.href = href; }, 170);
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
