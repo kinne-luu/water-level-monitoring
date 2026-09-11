@@ -5,45 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Cài Đặt & Lịch Sử Mực Nước</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
 <style>
   :root {
-    --safe: #22c55e;
-    --warn: #eab308;
-    --danger: #ef4444;
-    --accent: #38bdf8;
-    --bg: #090e17;
-    --bg-glow: #1e293b;
-    --card: #131c2e;
-    --card-inner: #0b1322;
-    --text: #f1f5f9;
-    --muted: #94a3b8;
-    --border: rgba(255, 255, 255, 0.08);
-    --scrollbar: rgba(255, 255, 255, 0.15);
-    --shadow-lg: rgba(0, 0, 0, 0.6);
-    --shadow-md: rgba(0, 0, 0, 0.45);
-    --shadow-xl: rgba(0, 0, 0, 0.7);
-    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    --safe: #30d158;
+    --warn: #ff9f0a;
+    --danger: #ff453a;
+    --accent: #0a84ff;
+    --bg: #060b16;
+    --bg-glow: #0e1c3a;
+    --card: #0f1c38;
+    --card-inner: #14274a;
+    --text: #f5f7fb;
+    --muted: #93a3c2;
+    --border: rgba(255, 255, 255, 0.10);
+    --scrollbar: rgba(147, 163, 194, 0.4);
+    --shadow-lg: rgba(0, 0, 0, 0.5);
+    --shadow-md: rgba(0, 0, 0, 0.35);
+    --shadow-xl: rgba(0, 0, 0, 0.55);
+    --glow-accent: rgba(10, 132, 255, 0.55);
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2393a3c2' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     color-scheme: dark;
-  }
-
-  :root[data-theme="light"] {
-    --safe: #16a34a;
-    --warn: #ca8a04;
-    --danger: #dc2626;
-    --accent: #0284c7;
-    --bg: #dceefc;
-    --bg-glow: #f3fbff;
-    --card: #ffffff;
-    --card-inner: #eaf5fd;
-    --text: #0f2438;
-    --muted: #5b7791;
-    --border: rgba(14, 116, 189, 0.14);
-    --scrollbar: rgba(14, 116, 189, 0.22);
-    --shadow-lg: rgba(14, 116, 189, 0.16);
-    --shadow-md: rgba(14, 116, 189, 0.14);
-    --shadow-xl: rgba(14, 116, 189, 0.2);
-    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235b7791' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    color-scheme: light;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -51,8 +33,9 @@
   html { -webkit-text-size-adjust: 100%; }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-    background: radial-gradient(circle at 50% 0%, var(--bg-glow) 0%, var(--bg) 80%);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: radial-gradient(circle at 50% 0%, var(--bg-glow) 0%, var(--bg) 70%);
     background-attachment: fixed;
     color: var(--text);
     display: flex;
@@ -66,10 +49,36 @@
     overscroll-behavior-y: contain;
   }
 
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-button,
+  ::-webkit-scrollbar-button:single-button,
+  ::-webkit-scrollbar-button:vertical:decrement,
+  ::-webkit-scrollbar-button:vertical:increment,
+  ::-webkit-scrollbar-button:horizontal:decrement,
+  ::-webkit-scrollbar-button:horizontal:increment {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  ::-webkit-scrollbar-corner { background: transparent; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; }
-  * { scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 10px;
+    transition: background 0.4s ease;
+  }
+  *:hover::-webkit-scrollbar-thumb,
+  *.is-scrolling::-webkit-scrollbar-thumb {
+    background: var(--scrollbar);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.4s ease;
+  }
+  *:hover, *.is-scrolling {
+    scrollbar-color: var(--scrollbar) transparent;
+  }
 
   .dashboard {
     width: 100%;
@@ -77,13 +86,13 @@
     height: 100%;
     max-height: calc(100dvh - 24px);
     background: var(--card);
-    border-radius: 18px;
+    border-radius: 24px;
     border: 1px solid var(--border);
-    box-shadow: 0 16px 40px var(--shadow-lg);
+    box-shadow: 0 24px 60px var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,0.06);
     display: flex;
     flex-direction: column;
-    padding: 16px;
-    gap: 14px;
+    padding: 14px 16px;
+    gap: 12px;
     overflow: hidden;
     min-height: 0;
   }
@@ -95,10 +104,10 @@
     align-items: center;
     gap: 10px;
     border-bottom: 1px solid var(--border);
-    padding-bottom: 12px;
+    padding-bottom: 10px;
   }
   .header h1 {
-    font-size: clamp(1rem, 4vw, 1.3rem);
+    font-size: clamp(1rem, 4vw, 1.25rem);
     font-weight: 700;
     letter-spacing: -0.01em;
     flex: 1 1 auto;
@@ -116,22 +125,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
     background: var(--card-inner);
     border: 1px solid var(--border);
     color: var(--muted);
     cursor: pointer;
     flex-shrink: 0;
-    transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    transition: color 0.2s ease, transform 0.15s ease;
   }
-  .theme-toggle-btn svg { width: 17px; height: 17px; }
-  .theme-toggle-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+  .theme-toggle-btn svg { width: 18px; height: 18px; }
+  .theme-toggle-btn:hover { color: var(--text); }
   .theme-toggle-btn:active { transform: scale(0.9); }
-  .theme-toggle-btn .icon-sun { display: none; }
-  :root[data-theme="light"] .theme-toggle-btn .icon-moon { display: none; }
-  :root[data-theme="light"] .theme-toggle-btn .icon-sun { display: block; }
 
   .nav-link {
     display: inline-flex;
@@ -141,19 +147,20 @@
     border: 1px solid var(--border);
     color: var(--text);
     text-decoration: none;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 6px 12px;
-    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 12px;
+    min-height: 38px;
+    transition: opacity 0.15s ease, transform 0.1s ease;
   }
-  .nav-link:hover { border-color: rgba(255,255,255,0.18); }
+  .nav-link:hover { opacity: 0.8; }
   .nav-link svg { width: 15px; height: 15px; }
 
-  /* ---- Two column layout ---- */
   .main-grid {
     display: grid;
-    grid-template-columns: 270px 1fr;
-    gap: 14px;
+    grid-template-columns: 280px 1fr;
+    gap: 12px;
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
@@ -162,10 +169,11 @@
   .control-col {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     overflow-y: auto;
-    padding-right: 4px;
+    padding: 2px 4px 2px 2px;
     min-height: 0;
+    overscroll-behavior: contain;
   }
 
   .info-col {
@@ -174,16 +182,17 @@
     gap: 12px;
     min-height: 0;
     overflow: hidden;
+    flex: 1 1 auto;
   }
 
   .panel {
     background: var(--card-inner);
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid var(--border);
-    padding: 14px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     flex-shrink: 0;
   }
   .panel-title {
@@ -198,65 +207,92 @@
   }
   .panel-title svg { width: 14px; height: 14px; }
 
+  .panel[data-collapsible] { gap: 0; }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+  .panel-chevron { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease; }
+  .panel.open .panel-chevron { transform: rotate(180deg); }
+  .panel-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;
+    margin-top: 0;
+  }
+  .panel-body > div { overflow: hidden; display: flex; flex-direction: column; gap: 8px; min-height: 0; padding: 2px; }
+  .panel.open .panel-body { grid-template-rows: 1fr; opacity: 1; margin-top: 8px; }
+
   .field { display: flex; flex-direction: column; gap: 4px; }
   .field label { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
 
-  .ip-config { display: flex; flex-direction: column; gap: 8px; }
+  .ip-config { display: flex; flex-direction: column; gap: 6px; }
   .ip-config input {
     background: var(--card);
     border: 1px solid var(--border);
     color: var(--text);
     font-size: 0.78rem;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border-radius: 8px;
     width: 100%;
     font-variant-numeric: tabular-nums;
   }
   .ip-config input:focus { outline: 1px solid var(--accent); }
   .ip-config button {
-    background: rgba(56, 189, 248, 0.15);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
     color: var(--accent);
-    border: 1px solid rgba(56, 189, 248, 0.35);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     border-radius: 8px;
-    padding: 8px 10px;
+    padding: 7px 10px;
     font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
     width: 100%;
   }
-  .ip-config button:hover { background: rgba(56, 189, 248, 0.25); }
+  .ip-config button:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 
   .threshold-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
   }
   .threshold-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .threshold-row label {
-    font-size: 0.76rem;
+    font-size: 0.75rem;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     color: var(--text);
   }
-  .threshold-input-wrap { display: flex; align-items: center; gap: 5px; }
+  .threshold-input-wrap { display: flex; align-items: center; gap: 4px; }
   .threshold-input {
     background: var(--card);
     border: 1px solid var(--border);
     color: var(--text);
-    font-size: 0.8rem;
-    padding: 6px 8px;
-    border-radius: 8px;
-    width: 68px;
+    font-size: 0.78rem;
+    padding: 4px 6px;
+    border-radius: 7px;
+    width: 62px;
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
   .threshold-input:focus { outline: 1px solid var(--accent); }
-  .threshold-unit { font-size: 0.7rem; color: var(--muted); }
+  .threshold-unit { font-size: 0.68rem; color: var(--muted); }
 
-  /* Hide native number input spin arrows everywhere */
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -264,8 +300,9 @@
   }
   input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
-  .threshold-hint { font-size: 0.68rem; color: var(--muted); line-height: 1.5; }
-  .threshold-status { font-size: 0.7rem; font-weight: 600; min-height: 14px; }
+  .threshold-hint { font-size: 0.66rem; color: var(--muted); line-height: 1.35; margin: 1px 0; }
+  .threshold-status { font-size: 0.7rem; font-weight: 600; min-height: 0; }
+  .threshold-status:empty { display: none; }
 
   .btn {
     display: inline-flex;
@@ -273,26 +310,26 @@
     justify-content: center;
     gap: 6px;
     border: none;
-    border-radius: 9px;
-    padding: 9px 14px;
-    font-size: 0.8rem;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
     transition: opacity 0.2s ease, transform 0.15s ease;
+    white-space: nowrap;
   }
   .btn:active { transform: scale(0.96); }
   .btn-full { width: 100%; }
   .btn-excel { background: var(--safe); color: #06210f; }
   .btn-excel:hover { opacity: 0.88; }
-  .btn-accent { background: rgba(56,189,248,0.15); color: var(--accent); border: 1px solid rgba(56,189,248,0.35); }
-  .btn-accent:hover { background: rgba(56,189,248,0.25); }
-  .btn-refresh { background: rgba(56,189,248,0.15); color: var(--accent); border: 1px solid rgba(56,189,248,0.35); }
-  .btn-refresh:hover { background: rgba(56,189,248,0.25); }
-  .btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.35); }
-  .btn-danger:hover { background: rgba(239,68,68,0.25); }
-  .btn svg { width: 15px; height: 15px; }
+  .btn-accent { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+  .btn-accent:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+  .btn-refresh { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+  .btn-refresh:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+  .btn-danger { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); }
+  .btn-danger:hover { background: color-mix(in srgb, var(--danger) 25%, transparent); }
+  .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 
-  /* ---- Custom dropdown styling (shared by all selects) ---- */
   select {
     appearance: none;
     -webkit-appearance: none;
@@ -328,7 +365,7 @@
     background: var(--card-inner);
     border-radius: 14px;
     border: 1px solid var(--border);
-    padding: 14px;
+    padding: 12px;
     text-align: center;
   }
   .summary-label {
@@ -339,9 +376,9 @@
     letter-spacing: 0.05em;
   }
   .summary-value {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: 800;
-    margin-top: 6px;
+    margin-top: 4px;
     font-variant-numeric: tabular-nums;
   }
 
@@ -358,6 +395,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+    width: 100%;
   }
 
   .modal-overlay {
@@ -367,7 +405,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: 999999;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
@@ -396,14 +434,19 @@
     background: var(--card-inner);
     border-radius: 14px;
     border: 1px solid var(--border);
-    overflow: auto;
-    flex: 1 1 auto;
-    min-height: 120px;
+    overflow-y: auto;
+    overflow-x: auto;
+    flex: 1 1 0px;
+    min-height: 0;
+    height: 100%;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
   thead th {
     position: sticky;
     top: 0;
+    z-index: 2;
     background: var(--card-inner);
     text-align: left;
     padding: 10px 12px;
@@ -431,12 +474,9 @@
     font-weight: 700;
   }
   .level-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
-
   .empty-row td { text-align: center; color: var(--muted); padding: 26px 12px; }
-
   .footer-note { font-size: 0.72rem; color: var(--muted); text-align: right; flex-shrink: 0; }
 
-  /* ---- OTA modal ---- */
   .ota-drop {
     border: 2px dashed var(--border);
     border-radius: 10px;
@@ -447,369 +487,214 @@
     cursor: pointer;
     transition: 0.2s ease;
   }
-  .ota-drop.drag { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.06); }
+  .ota-drop.drag { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
   .ota-drop input { display: none; }
-  .ota-modal-box { max-width: 460px; max-height: 82vh; overflow-y: auto; }
+  .ota-modal-box { max-width: 920px; width: 95vw; height: 600px; max-height: 88vh; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
   .ota-field { background: var(--card-inner); border: 1px solid var(--border); color: var(--text);
     padding: 8px 10px; border-radius: 8px; font-size: 0.8rem; width: 100%; font-family: inherit; }
   .ota-progress { height: 6px; background: var(--card-inner); border-radius: 99px; overflow: hidden; display: none; }
   .ota-progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
   .ota-status-line { font-size: 0.74rem; color: var(--muted); text-align: center; }
-  .ota-list { display: flex; flex-direction: column; gap: 8px; }
-  .ota-item { background: var(--card-inner); border: 1px solid var(--border); border-radius: 10px;
-    padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
-  .ota-item.active { border-color: var(--safe); }
+  .ota-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; overflow-y: auto; padding: 6px 6px 6px 2px; align-content: start; overscroll-behavior: contain; }
+  .ota-item { background: var(--card-inner); border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; min-height: 140px; transition: transform .18s ease, border-color .2s ease; }
+  .ota-item:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+  .ota-item.active { border-color: var(--safe); box-shadow: inset 0 0 0 1px var(--safe); }
   .ota-item-top { display: flex; justify-content: space-between; align-items: center; }
-  .ota-version { font-weight: 700; font-size: 0.86rem; }
-  .ota-badge { font-size: 0.62rem; background: var(--safe); color: #06210f; border-radius: 6px; padding: 2px 6px; font-weight: 700; }
-  .ota-note { font-size: 0.74rem; color: var(--muted); }
-  .ota-meta { font-size: 0.66rem; color: var(--muted); opacity: 0.8; }
+  .ota-version { font-weight: 700; font-size: 0.95rem; }
+  .ota-badge { font-size: 0.62rem; background: var(--safe); color: #06210f; border-radius: 999px; padding: 2px 7px; font-weight: 700; }
+  .ota-note { font-size: 0.73rem; color: var(--muted); line-height: 1.4; word-break: break-word; flex: 1; }
+  .ota-meta { font-size: 0.65rem; color: var(--muted); opacity: 0.85; border-top: 1px solid var(--border); padding-top: 6px; }
   .ota-item-actions { display: flex; gap: 6px; margin-top: 4px; }
-  .ota-item-actions button { flex: 1; border: none; border-radius: 6px; padding: 6px 8px; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
-  .ota-btn-activate { background: rgba(56,189,248,0.18); color: var(--accent); }
-  .ota-btn-rollback { background: rgba(234,179,8,0.18); color: var(--warn); }
-  .ota-btn-delete { background: rgba(239,68,68,0.15); color: var(--danger); }
+  .ota-item-actions button { flex: 1; border: none; border-radius: 6px; padding: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: opacity .15s ease; }
+  .ota-item-actions button:hover { opacity: .85; }
+  .ota-btn-activate { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+  .ota-btn-rollback { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .ota-btn-delete { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+  
+  .ota-modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .ota-modal-body { display: grid; grid-template-columns: 280px 1fr; gap: 16px; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  .ota-upload-pane { display: flex; flex-direction: column; gap: 10px; background: color-mix(in srgb, var(--card-inner) 60%, transparent); border: 1px solid var(--border); border-radius: 12px; padding: 14px; overflow-y: auto; overscroll-behavior: contain; }
+  .ota-list-pane { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
+
+  .ota-checkin-box {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: 12px;
+    padding: 10px 14px;
+    flex-shrink: 0;
+  }
+  .ota-checkin-box.done {
+    background: color-mix(in srgb, var(--safe) 12%, transparent);
+    border-color: color-mix(in srgb, var(--safe) 40%, transparent);
+  }
+  .ota-checkin-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .ota-checkin-dot.pulse {
+    animation: otaCheckinPulse 1.1s ease-in-out infinite;
+  }
+  .ota-checkin-box.done .ota-checkin-dot { background: var(--safe); animation: none; box-shadow: 0 0 8px var(--safe); }
+  @keyframes otaCheckinPulse {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+    70% { box-shadow: 0 0 0 9px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  .ota-checkin-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ota-checkin-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+  .ota-checkin-sub { font-size: 0.7rem; color: var(--muted); }
+  .ota-checkin-box .btn { flex-shrink: 0; width: auto; padding: 7px 14px; }
+
+  .wifi-field { display: flex; flex-direction: column; gap: 6px; }
+  .wifi-field label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+  .wifi-input { background: var(--card-inner); border: 1px solid var(--border); color: var(--text); font-size: 0.85rem; padding: 10px 14px; border-radius: 10px; width: 100%; outline: none; transition: border-color 0.2s; }
+  .wifi-input:focus { border-color: var(--accent); }
+  .wifi-status-box { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; background: var(--card-inner); border: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; }
 
   @media (max-width: 760px) {
-    .main-grid { grid-template-columns: 1fr; overflow-y: auto; }
-    .control-col { overflow-y: visible; padding-right: 0; }
-    .info-col { min-height: 420px; }
+    html, body {
+      height: auto !important;
+      min-height: 100% !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+    body {
+      padding: 0;
+      overscroll-behavior-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .dashboard {
+      height: auto;
+      max-height: none;
+      min-height: 100dvh;
+      overflow: visible;
+      gap: 14px;
+      border-radius: 0;
+      border-left: 0;
+      border-right: 0;
+      box-shadow: none;
+      padding: 12px;
+    }
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: color-mix(in srgb, var(--card) 94%, transparent);
+      backdrop-filter: blur(14px);
+    }
+    .header-status {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+    }
+    .conn-badge { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .nav-link { padding: 7px 9px; }
+    .nav-link span { display: none; }
+    .main-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      height: auto;
+      min-height: auto;
+      overflow: visible;
+    }
+    .control-col {
+      order: 1;
+      height: auto;
+      min-height: auto;
+      overflow: visible;
+      padding: 10px;
+      padding-right: 10px;
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--card-inner) 58%, transparent);
+      border: 1px solid var(--border);
+      gap: 10px;
+    }
+    .info-col {
+      order: 2;
+      height: auto;
+      min-height: auto;
+      overflow: visible;
+      padding: 10px;
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--card-inner) 28%, transparent);
+      border: 1px solid var(--border);
+      gap: 12px;
+    }
+    .summary-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      overflow: visible;
+    }
+    .summary-card { padding: 10px 8px; }
+    .summary-value { font-size: 1.2rem; }
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .toolbar-left {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+    }
+    .filter-select, .filter-input, .btn-refresh, .toolbar-left .btn-danger {
+      width: 100%;
+    }
+    .table-wrap {
+      max-height: 50dvh;
+      min-height: 260px;
+      height: auto;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .footer-note { text-align: left; }
+    .ip-config { grid-column: 1 / -1; width: 100%; margin-left: 0; }
+    .ip-config input { min-width: 0; flex: 1; }
   }
 
   @media (max-width: 380px) {
     .header h1 { font-size: 1rem; }
     .toolbar { flex-direction: column; align-items: stretch; }
     .toolbar-left { flex-direction: column; align-items: stretch; }
+    .header-status { grid-template-columns: 1fr auto auto; }
+    .nav-link { width: 34px; justify-content: center; padding: 7px; }
+    .panel-title { font-size: .7rem; }
+    .threshold-row label { font-size: .72rem; }
+    .threshold-input { width: 62px; }
   }
 
-
-/* ===== Shared navigation + responsive refinement ===== */
-html {
-  background: var(--bg);
-}
-body {
-  animation: pageEnter .34s cubic-bezier(.22,.8,.22,1);
-}
-body.page-leaving {
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity .18s ease, transform .18s ease;
-}
-@keyframes pageEnter {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.nav-link {
-  min-height: 34px;
-  transition: transform .16s ease, border-color .2s ease, background .2s ease;
-}
-.nav-link:hover { transform: translateY(-1px); }
-.nav-link:active { transform: scale(.96); }
-.nav-link svg { flex-shrink: 0; }
-
-@media (max-width: 760px) {
-  body { padding: 0; }
-  .dashboard {
-    min-height: 100dvh;
-    border-radius: 0;
-    border-left: 0;
-    border-right: 0;
-    box-shadow: none;
-    padding: 14px;
+  @media (max-width: 720px) {
+    .ota-modal-box { height: 90vh; padding: 14px; }
+    .ota-modal-body { grid-template-columns: 1fr; overflow-y: auto; }
+    .ota-list-pane { overflow: visible; }
+    .ota-list { overflow: visible; grid-template-columns: 1fr; }
   }
-  .header {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    background: color-mix(in srgb, var(--card) 94%, transparent);
-    backdrop-filter: blur(14px);
-  }
-  .header-status {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
-  }
-  .conn-badge {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .nav-link {
-    padding: 7px 9px;
-  }
-  .nav-link span {
-    display: none;
-  }
-  .ip-config {
-    grid-column: 1 / -1;
-    width: 100%;
-    margin-left: 0;
-  }
-  .ip-config input { min-width: 0; flex: 1; }
-}
 
-/* Settings-specific information architecture */
-.main-grid {
-  grid-template-columns: minmax(300px, .82fr) minmax(0, 1.9fr);
-}
-.control-col {
-  background: color-mix(in srgb, var(--card-inner) 58%, transparent);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 12px;
-  gap: 10px;
-}
-.control-col .panel {
-  border-radius: 11px;
-  padding: 12px;
-}
-.info-col {
-  background: color-mix(in srgb, var(--card-inner) 28%, transparent);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 12px;
-}
-.summary-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.summary-card { padding: 12px; }
-.toolbar {
-  background: var(--card-inner);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  padding: 9px;
-}
-.table-wrap { border-radius: 11px; }
-@media (max-width: 760px) {
-  html, body { height: auto; overflow: auto; }
-  .dashboard {
-    height: auto;
-    max-height: none;
-    overflow: visible;
-    gap: 12px;
+  html { background: var(--bg); }
+  body { animation: pageEnter .34s cubic-bezier(.22,.8,.22,1); }
+  body.page-leaving { opacity: 0; transform: translateY(8px); transition: opacity .18s ease, transform .18s ease; }
+  @keyframes pageEnter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .nav-link:active { transform: scale(.96); }
+  .nav-link svg { flex-shrink: 0; }
+
+  @media (min-width: 761px) {
+    .main-grid { grid-template-columns: minmax(270px, .82fr) minmax(0, 1.9fr); gap: 12px; }
+    .control-col { background: color-mix(in srgb, var(--card-inner) 58%, transparent); border: 1px solid var(--border); border-radius: 16px; padding: 8px; gap: 7px; }
+    .control-col .panel { border-radius: 11px; padding: 9px 11px; gap: 6px; }
+    .control-col .panel.open .panel-body { margin-top: 6px; }
+    .info-col { background: color-mix(in srgb, var(--card-inner) 28%, transparent); border: 1px solid var(--border); border-radius: 16px; padding: 12px; }
+    .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .summary-card { padding: 10px; }
+    .toolbar { background: var(--card-inner); border: 1px solid var(--border); border-radius: 11px; padding: 8px; }
+    .table-wrap { border-radius: 11px; }
   }
-  .main-grid {
-    display: flex;
-    flex-direction: column;
-    overflow: visible;
-  }
-  .control-col, .info-col {
-    overflow: visible;
-    min-height: 0;
-    padding: 10px;
-    border-radius: 14px;
-  }
-  .control-col { order: 1; }
-  .info-col { order: 2; }
-  .summary-grid {
-    grid-template-columns: repeat(3, minmax(96px, 1fr));
-    overflow-x: auto;
-  }
-  .summary-card { padding: 10px 6px; }
-  .summary-value { font-size: 1.15rem; }
-  .toolbar { align-items: stretch; }
-  .toolbar-left { width: 100%; }
-  .filter-select, .filter-input { flex: 1; min-width: 0; }
-  .table-wrap {
-    max-height: 52dvh;
-    min-height: 280px;
-  }
-  .footer-note { text-align: left; }
-}
-@media (max-width: 430px) {
-  .header-status { grid-template-columns: 1fr auto auto; }
-  .nav-link { width: 34px; justify-content: center; padding: 7px; }
-  .panel-title { font-size: .7rem; }
-  .threshold-row label { font-size: .72rem; }
-  .threshold-input { width: 62px; }
-}
-
-
-
-/* ===== OTA 2-COLUMN LAYOUT ===== */
-.ota-modal-box {
-  max-width: 920px;
-  width: 95vw;
-  height: 600px;
-  max-height: 88vh;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.ota-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 10px;
-}
-
-.ota-modal-body {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 16px;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* Cột Upload bên trái */
-.ota-upload-pane {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: color-mix(in srgb, var(--card-inner) 60%, transparent);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
-  overflow-y: auto;
-}
-
-.ota-drop {
-  border: 2px dashed var(--border);
-  border-radius: 10px;
-  padding: 14px 10px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.74rem;
-  cursor: pointer;
-  min-height: 80px;
-  display: grid;
-  place-items: center;
-  transition: 0.2s ease;
-}
-.ota-drop:hover, .ota-drop.drag {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(56,189,248,0.06);
-}
-.ota-drop input { display: none; }
-
-.ota-field {
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  width: 100%;
-  font-family: inherit;
-  resize: vertical;
-}
-
-/* Cột Danh sách bên phải */
-.ota-list-pane {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.ota-status-line {
-  font-size: 0.74rem;
-  color: var(--muted);
-  background: var(--card-inner);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  text-align: left;
-}
-
-.ota-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-  overflow-y: auto;
-  padding-right: 4px;
-  align-content: start;
-}
-
-.ota-item {
-  background: var(--card-inner);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 140px;
-  transition: transform .18s ease, border-color .2s ease;
-}
-.ota-item:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
-}
-.ota-item.active {
-  border-color: var(--safe);
-  box-shadow: inset 0 0 0 1px var(--safe);
-}
-.ota-item-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.ota-version { font-weight: 700; font-size: 0.95rem; }
-.ota-badge {
-  font-size: 0.62rem;
-  background: var(--safe);
-  color: #06210f;
-  border-radius: 999px;
-  padding: 2px 7px;
-  font-weight: 700;
-}
-.ota-note {
-  font-size: 0.73rem;
-  color: var(--muted);
-  line-height: 1.4;
-  word-break: break-word;
-  flex: 1;
-}
-.ota-meta {
-  font-size: 0.65rem;
-  color: var(--muted);
-  opacity: 0.85;
-  border-top: 1px solid var(--border);
-  padding-top: 6px;
-}
-.ota-item-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
-}
-.ota-item-actions button {
-  flex: 1;
-  border: none;
-  border-radius: 6px;
-  padding: 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity .15s ease;
-}
-.ota-item-actions button:hover { opacity: .85; }
-
-@media (max-width: 720px) {
-  .ota-modal-box {
-    height: 90vh;
-    padding: 14px;
-  }
-  .ota-modal-body {
-    grid-template-columns: 1fr;
-    overflow-y: auto;
-  }
-  .ota-list-pane {
-    overflow: visible;
-  }
-  .ota-list {
-    overflow: visible;
-    grid-template-columns: 1fr;
-  }
-}
-
 </style>
 </head>
 <body>
@@ -819,43 +704,51 @@ body.page-leaving {
     <h1>Cài Đặt &amp; Lịch Sử Mực Nước</h1>
     <div class="header-status">
       <div id="connStatus" class="conn-badge">Đang kết nối...</div>
+      
+      <button id="wifiOpenBtn" class="theme-toggle-btn" aria-label="Cấu hình WiFi" title="Cấu hình WiFi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+          <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+          <line x1="12" y1="20" x2="12.01" y2="20"></line>
+        </svg>
+      </button>
+
       <a class="nav-link page-link" href="index.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"></path><path d="M5 10v10h14V10"></path></svg>
         Bảng chính
       </a>
-      <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Chuyển giao diện sáng/tối" title="Chuyển giao diện sáng/tối">
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="4"></circle>
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-        </svg>
-      </button>
     </div>
   </div>
 
   <div class="main-grid">
-    <!-- ===== LEFT: CONTROL COLUMN ===== -->
-    <div class="control-col">
-
-      <div class="panel">
-        <div class="panel-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20l9-9-9-9-9 9 9 9z"></path></svg>
-          Kết nối Worker
-        </div>
+    <div class="control-col" data-lenis-prevent>
+      <div class="panel open" data-collapsible>
+        <button class="panel-header" type="button">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20l9-9-9-9-9 9 9 9z"></path></svg>
+            Kết nối Worker
+          </div>
+          <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="panel-body"><div>
         <div class="ip-config">
           <input type="text" id="workerUrlInput" placeholder="URL Cloudflare Worker">
           <input type="password" id="deviceKeyInput" placeholder="Device Key">
           <button id="workerUrlSaveBtn">Kết nối</button>
         </div>
+        </div></div>
       </div>
 
-      <div class="panel">
-        <div class="panel-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-          Ngưỡng cảnh báo
-        </div>
+      <div class="panel open" data-collapsible>
+        <button class="panel-header" type="button">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            Ngưỡng cảnh báo
+          </div>
+          <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="panel-body"><div>
 
         <div class="threshold-row">
           <label><span class="dot" style="background:var(--danger); box-shadow:0 0 6px var(--danger);"></span>Nguy hiểm ≤</label>
@@ -879,45 +772,50 @@ body.page-leaving {
           </div>
         </div>
 
-        <div class="threshold-hint">Sau khi lưu, ESP32 sẽ tự động lấy ngưỡng mới trong vòng khoảng 30 giây (không cần nạp lại code).</div>
+        <div class="threshold-hint">Hệ thống cập nhật sau khi lưu trong 20s.</div>
         <div id="thresholdStatus" class="threshold-status"></div>
         <button id="thresholdSaveBtn" class="btn btn-accent btn-full">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-          Lưu ngưỡng
+          Lưu
         </button>
+        </div></div>
       </div>
 
-      <div class="panel">
-        <div class="panel-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          Quản lý dữ liệu
-        </div>
+      <div class="panel open" data-collapsible>
+        <button class="panel-header" type="button">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Quản lý dữ liệu
+          </div>
+          <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="panel-body"><div>
         <button id="exportBtn" class="btn btn-excel btn-full">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
           Xuất Excel
         </button>
-        <button id="deleteBtn" class="btn btn-danger btn-full">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          Xoá dữ liệu
-        </button>
+        </div></div>
       </div>
 
-      <div class="panel">
-        <div class="panel-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.64"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
-          Firmware
-        </div>
+      <div class="panel open" data-collapsible>
+        <button class="panel-header" type="button">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.64"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
+            Firmware
+          </div>
+          <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="panel-body"><div>
         <button id="otaOpenBtn" class="btn btn-accent btn-full">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
           Update OTA
         </button>
+        </div></div>
       </div>
 
     </div>
 
-    <!-- ===== RIGHT: INFO COLUMN ===== -->
     <div class="info-col">
-
       <div class="summary-grid">
         <div class="summary-card">
           <div class="summary-label">Tổng bản ghi</div>
@@ -947,15 +845,19 @@ body.page-leaving {
             <option value="danger">Nguy hiểm</option>
             <option value="error">Lỗi</option>
           </select>
-          <input type="text" id="deviceFilter" class="filter-input" placeholder="Lọc theo device_id (vd: mahirun)">
+          <input type="text" id="deviceFilter" class="filter-input" placeholder="Lọc theo device_id">
           <button id="refreshBtn" class="btn btn-refresh">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
             Làm mới
           </button>
+          <button id="deleteBtn" class="btn btn-danger">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Xoá dữ liệu
+          </button>
         </div>
       </div>
 
-      <div class="table-wrap">
+      <div class="table-wrap" data-lenis-prevent>
         <table>
           <thead>
             <tr>
@@ -1005,6 +907,39 @@ body.page-leaving {
   </div>
 </div>
 
+<div id="wifiModal" class="modal-overlay">
+  <div class="modal-box" style="max-width: 400px;">
+    <div class="ota-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+      <div class="modal-title" style="color:var(--text); display:flex; align-items:center; gap:8px;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+        Cấu Hình WiFi Thiết Bị
+      </div>
+      <button id="wifiCloseBtn" class="btn btn-ghost" style="padding: 5px; font-size: 1.2rem; line-height: 1;">✕</button>
+    </div>
+
+    <div id="wifiStatusBadge" class="wifi-status-box">Nhập IP thiết bị để kiểm tra...</div>
+
+    <div class="wifi-field">
+      <label>Địa chỉ IP thiết bị (LAN)</label>
+      <input type="text" id="wifiDeviceIpEl" class="wifi-input" placeholder="vd: 192.168.1.25">
+    </div>
+
+    <div class="wifi-field">
+      <label>Tên WiFi (SSID)</label>
+      <input type="text" id="wifiSsidManualInput" class="wifi-input" placeholder="Tên WiFi">
+    </div>
+
+    <div class="wifi-field">
+      <label>Mật khẩu WiFi</label>
+      <input type="password" id="wifiPassInput" class="wifi-input" placeholder="Mật khẩu">
+    </div>
+
+    <button id="wifiSaveBtn" class="btn btn-safe btn-full" style="background: rgba(34, 197, 94, 0.15); color: var(--safe); border: 1px solid rgba(34, 197, 94, 0.35);">Lưu & Kết Nối Lại</button>
+
+    <div id="wifiMsg" style="font-size: 0.75rem; text-align: center; min-height: 18px; font-weight: 600;"></div>
+  </div>
+</div>
+
 <div id="otaModal" class="modal-overlay">
   <div class="modal-box ota-modal-box">
     <div class="ota-modal-header">
@@ -1012,39 +947,45 @@ body.page-leaving {
       <button id="otaCloseBtn" class="btn btn-ghost" style="padding: 5px 12px; font-size: 0.75rem;">Đóng</button>
     </div>
 
+    <div class="ota-checkin-box" id="otaCheckinBox">
+      <span class="ota-checkin-dot" id="otaCheckinDot"></span>
+      <div class="ota-checkin-body">
+        <div class="ota-checkin-title" id="otaCheckinTitle">Đang chờ chip checkin...</div>
+        <div class="ota-checkin-sub" id="otaCheckinSub"></div>
+      </div>
+      <button id="otaCheckinConfirmBtn" class="btn btn-accent" style="display:none;">Xác nhận</button>
+    </div>
+
     <div class="ota-modal-body">
-      <!-- Cột trái: Form upload gọn gàng -->
-      <div class="ota-upload-pane">
+      <div class="ota-upload-pane" data-lenis-prevent>
         <div class="ota-drop" id="otaDrop">
           Kéo thả file <strong>.bin</strong> hoặc bấm chọn
           <input type="file" id="otaFile" accept=".bin">
         </div>
 
-        <input type="text" id="otaVersion" class="ota-field" placeholder="Phiên bản (vd: 1.2.0)">
+        <input type="text" id="otaVersion" class="ota-field" placeholder="Phiên bản">
         <textarea id="otaNote" class="ota-field" placeholder="Ghi chú cập nhật..." rows="3"></textarea>
         
         <div class="ota-progress" id="otaProgress"><div class="ota-progress-fill" id="otaProgressFill"></div></div>
         <button id="otaUploadBtn" class="btn btn-excel btn-full" disabled>Tải lên</button>
       </div>
 
-      <!-- Cột phải: Danh sách OTA dạng lưới cuộn riêng biệt -->
       <div class="ota-list-pane">
         <div class="ota-status-line" id="otaDeviceStatus">Đang tải danh sách...</div>
-        <div class="ota-list" id="otaList"></div>
+        <div class="ota-list" id="otaList" data-lenis-prevent></div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  const themeToggleBtnEl = document.getElementById("themeToggleBtn");
-  const savedTheme = localStorage.getItem("theme") ||
-    (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-  document.documentElement.setAttribute("data-theme", savedTheme);
-  themeToggleBtnEl.addEventListener("click", () => {
-    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("theme", next);
+  const collapsiblePanels = document.querySelectorAll('.control-col .panel[data-collapsible]');
+
+  collapsiblePanels.forEach(panel => {
+    const header = panel.querySelector('.panel-header');
+    header.addEventListener('click', () => {
+      panel.classList.toggle('open');
+    });
   });
 
   const connStatusEl = document.getElementById("connStatus");
@@ -1072,8 +1013,6 @@ body.page-leaving {
   const noticeTextEl = document.getElementById("noticeText");
   const noticeOkBtnEl = document.getElementById("noticeOkBtn");
 
-  // Custom replacement for window.alert() so notifications match the
-  // dashboard's look instead of the browser's default popup.
   function showNotice(title, message, type = "info") {
     const color = type === "error" ? "var(--danger)" : type === "success" ? "var(--safe)" : "var(--accent)";
     noticeTitleEl.textContent = title;
@@ -1105,7 +1044,6 @@ body.page-leaving {
   workerUrlInputEl.value = workerBaseUrl;
   deviceKeyInputEl.value = deviceKey;
 
-  // ---- Threshold settings (local reference + logged to D1) ----
   const DEFAULT_THRESHOLDS = { danger: 15, warn: 40, detect: 180 };
   function loadThresholds() {
     try {
@@ -1349,7 +1287,6 @@ body.page-leaving {
   fetchData();
   setInterval(fetchData, 15000);
 
-  // ---- OTA management ----
   const otaOpenBtnEl = document.getElementById("otaOpenBtn");
   const otaModalEl = document.getElementById("otaModal");
   const otaCloseBtnEl = document.getElementById("otaCloseBtn");
@@ -1364,10 +1301,68 @@ body.page-leaving {
   const otaProgressFillEl = document.getElementById("otaProgressFill");
 
   let otaSelectedFile = null;
+  let otaLastList = [];
 
   function otaDeviceId() {
     return deviceFilterEl.value.trim() || "mahirun";
   }
+
+  const otaCheckinBoxEl = document.getElementById("otaCheckinBox");
+  const otaCheckinDotEl = document.getElementById("otaCheckinDot");
+  const otaCheckinTitleEl = document.getElementById("otaCheckinTitle");
+  const otaCheckinSubEl = document.getElementById("otaCheckinSub");
+  const otaCheckinConfirmBtnEl = document.getElementById("otaCheckinConfirmBtn");
+
+  let otaCheckinTimer = null;
+  let otaCheckinDeviceId = null;
+  let otaCheckinSinceEpoch = 0;
+
+  function otaCheckinStart(deviceId, version) {
+    otaCheckinDeviceId = deviceId;
+    otaCheckinSinceEpoch = Math.floor(Date.now() / 1000) - 2;
+
+    clearInterval(otaCheckinTimer);
+    otaCheckinBoxEl.style.display = "flex";
+    otaCheckinBoxEl.classList.remove("done");
+    otaCheckinDotEl.classList.add("pulse");
+    otaCheckinConfirmBtnEl.style.display = "none";
+    otaCheckinTitleEl.textContent = `Đang chờ chip checkin bản ${version || ""}...`;
+    otaCheckinSubEl.textContent = `Đã gửi lệnh lúc ${new Date().toLocaleTimeString("vi-VN")} · device: ${deviceId}`;
+
+    otaCheckinPoll();
+    otaCheckinTimer = setInterval(otaCheckinPoll, 3000);
+  }
+
+  async function otaCheckinPoll() {
+    if (!workerBaseUrl || !otaCheckinDeviceId) return;
+    try {
+      const res = await fetch(workerBaseUrl + "/history-data", { cache: "no-store", mode: "cors" });
+      if (!res.ok) return;
+      const rows = await res.json();
+      const hit = (Array.isArray(rows) ? rows : [])
+        .filter(r => (r.device_id || "") === otaCheckinDeviceId && r.epoch > otaCheckinSinceEpoch)
+        .sort((a, b) => b.epoch - a.epoch)[0];
+      if (hit) otaCheckinFinish(hit);
+    } catch (e) {
+    }
+  }
+
+  function otaCheckinFinish(row) {
+    clearInterval(otaCheckinTimer);
+    otaCheckinTimer = null;
+    otaCheckinDotEl.classList.remove("pulse");
+    otaCheckinBoxEl.classList.add("done");
+    otaCheckinTitleEl.textContent = "Chip đã checkin — hoàn thành";
+    otaCheckinSubEl.textContent = `Tín hiệu mới nhận lúc ${formatTs(row.epoch)}`;
+    otaCheckinConfirmBtnEl.style.display = "inline-flex";
+  }
+
+  otaCheckinConfirmBtnEl.addEventListener("click", () => {
+    clearInterval(otaCheckinTimer);
+    otaCheckinTimer = null;
+    otaCheckinBoxEl.style.display = "none";
+    otaCheckinBoxEl.classList.remove("done");
+  });
 
   otaOpenBtnEl.addEventListener("click", () => {
     if (!workerBaseUrl) {
@@ -1466,6 +1461,7 @@ body.page-leaving {
         return;
       }
 
+      otaLastList = list;
       const activeIdx = list.findIndex(x => x.is_active);
       otaListEl.innerHTML = list.map((item, idx) => {
         const isOlderThanActive = activeIdx >= 0 && idx > activeIdx;
@@ -1477,7 +1473,13 @@ body.page-leaving {
           </div>
           ${item.note ? `<div class="ota-note">${otaEscape(item.note)}</div>` : ""}
           <div class="ota-meta">${new Date(item.uploaded_at).toLocaleString("vi-VN")} · ${(item.size / 1024).toFixed(1)} KB</div>
-          ${item.is_active ? "" : `
+          ${item.is_active
+            ? `
+          <div class="ota-item-actions">
+            <button class="ota-btn-rollback" data-deact="${item.id}">Ngừng active</button>
+            <button class="ota-btn-delete" data-del="${item.id}" data-active="1">Xoá bản active</button>
+          </div>`
+            : `
           <div class="ota-item-actions">
             <button class="${isOlderThanActive ? "ota-btn-rollback" : "ota-btn-activate"}" data-act="${item.id}">
               ${isOlderThanActive ? "Rollback về bản này" : "Đẩy lên chip"}
@@ -1491,7 +1493,10 @@ body.page-leaving {
         btn.addEventListener("click", () => otaActivate(btn.dataset.act));
       });
       otaListEl.querySelectorAll("[data-del]").forEach(btn => {
-        btn.addEventListener("click", () => otaDelete(btn.dataset.del));
+        btn.addEventListener("click", () => otaDelete(btn.dataset.del, btn.dataset.active === "1"));
+      });
+      otaListEl.querySelectorAll("[data-deact]").forEach(btn => {
+        btn.addEventListener("click", () => otaDeactivate(btn.dataset.deact));
       });
     } catch (e) {
       otaListEl.innerHTML = '<div class="ota-status-line">Lỗi tải danh sách</div>';
@@ -1511,22 +1516,46 @@ body.page-leaving {
       });
       if (!res.ok) throw new Error(await res.text());
       showNotice("Đã đẩy lên chip", "Chip sẽ tự tải và flash trong tối đa 20 giây tới.", "success");
+      const pushedItem = otaLastList.find(x => String(x.id) === String(id));
+      otaCheckinStart(otaDeviceId(), pushedItem ? pushedItem.version : "");
       otaRefreshList();
     } catch (e) {
       showNotice("Lỗi", e.message, "error");
     }
   }
 
-  async function otaDelete(id) {
+  async function otaDeactivate(id) {
+    if (!deviceKey) {
+      showNotice("Thiếu Device Key", "Cần nhập Device Key để ngừng active.", "error");
+      return;
+    }
+    try {
+      const res = await fetch(workerBaseUrl + "/ota/deactivate", {
+        method: "POST",
+        headers: { "X-Device-Key": deviceKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId: otaDeviceId() })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      showNotice("Đã ngừng active", "Chip sẽ không tự cập nhật OTA nữa cho tới khi bạn đẩy bản khác.", "success");
+      otaRefreshList();
+    } catch (e) {
+      showNotice("Lỗi", e.message, "error");
+    }
+  }
+
+  async function otaDelete(id, isActive) {
     if (!deviceKey) {
       showNotice("Thiếu Device Key", "Cần nhập Device Key để xoá.", "error");
+      return;
+    }
+    if (isActive && !confirm("Bản này đang ACTIVE. Xoá sẽ tự ngừng active rồi xoá luôn, chip sẽ không còn bản OTA nào để chạy nữa. Vẫn xoá?")) {
       return;
     }
     try {
       const res = await fetch(workerBaseUrl + "/ota/delete", {
         method: "POST",
         headers: { "X-Device-Key": deviceKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ id: Number(id), deviceId: otaDeviceId() })
+        body: JSON.stringify({ id: Number(id), deviceId: otaDeviceId(), force: !!isActive })
       });
       if (!res.ok) throw new Error(await res.text());
       otaRefreshList();
@@ -1538,6 +1567,107 @@ body.page-leaving {
   function otaEscape(s) {
     return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
+
+  const wifiModalEl = document.getElementById("wifiModal");
+  const wifiOpenBtnEl = document.getElementById("wifiOpenBtn");
+  const wifiCloseBtnEl = document.getElementById("wifiCloseBtn");
+  const wifiStatusBadgeEl = document.getElementById("wifiStatusBadge");
+  const wifiDeviceIpEl = document.getElementById("wifiDeviceIpEl");
+  const wifiSsidManualInputEl = document.getElementById("wifiSsidManualInput");
+  const wifiPassInputEl = document.getElementById("wifiPassInput");
+  const wifiSaveBtnEl = document.getElementById("wifiSaveBtn");
+  const wifiMsgEl = document.getElementById("wifiMsg");
+
+  wifiDeviceIpEl.value = localStorage.getItem("deviceIp") || "";
+  wifiDeviceIpEl.addEventListener("change", () => {
+    localStorage.setItem("deviceIp", wifiDeviceIpEl.value.trim());
+    checkWifiStatus();
+  });
+
+  function getDeviceBaseUrl() {
+    const ip = wifiDeviceIpEl.value.trim();
+    return ip ? (ip.startsWith("http") ? ip : `http://${ip}`) : "";
+  }
+
+  async function checkWifiStatus() {
+    const base = getDeviceBaseUrl();
+    if (!base) {
+      wifiStatusBadgeEl.innerHTML = "Nhập IP thiết bị để kiểm tra...";
+      wifiStatusBadgeEl.style.color = "var(--muted)";
+      return;
+    }
+    wifiStatusBadgeEl.innerHTML = "Đang kiểm tra trạng thái...";
+    wifiStatusBadgeEl.style.color = "var(--text)";
+    try {
+      const res = await fetch(base + "/wifi-status");
+      const data = await res.json();
+      if (data.connected) {
+        wifiStatusBadgeEl.innerHTML = `<span class="dot" style="background:var(--safe);box-shadow:0 0 6px var(--safe);"></span> Đã kết nối: ${data.ssid} (${data.ip})`;
+        wifiStatusBadgeEl.style.color = "var(--safe)";
+      } else {
+        wifiStatusBadgeEl.innerHTML = `<span class="dot" style="background:var(--warn);box-shadow:0 0 6px var(--warn);"></span> Chưa kết nối WiFi`;
+        wifiStatusBadgeEl.style.color = "var(--warn)";
+      }
+    } catch (e) {
+      wifiStatusBadgeEl.innerHTML = `<span class="dot" style="background:var(--danger);box-shadow:0 0 6px var(--danger);"></span> Lỗi kết nối đến IP thiết bị`;
+      wifiStatusBadgeEl.style.color = "var(--danger)";
+    }
+  }
+
+  wifiOpenBtnEl.addEventListener("click", () => {
+    wifiModalEl.classList.add("open");
+    checkWifiStatus();
+  });
+
+  wifiCloseBtnEl.addEventListener("click", () => wifiModalEl.classList.remove("open"));
+  wifiModalEl.addEventListener("click", (e) => {
+    if (e.target === wifiModalEl) wifiModalEl.classList.remove("open");
+  });
+
+  wifiSaveBtnEl.addEventListener("click", async () => {
+    const base = getDeviceBaseUrl();
+    const ssid = wifiSsidManualInputEl.value.trim();
+    const pass = wifiPassInputEl.value;
+    
+    if (!base) {
+      wifiMsgEl.textContent = "Cần nhập IP thiết bị";
+      wifiMsgEl.style.color = "var(--warn)";
+      return;
+    }
+    if (!deviceKey) {
+      wifiMsgEl.textContent = "Cần nhập Device Key ở phần 'Kết nối Worker' trước";
+      wifiMsgEl.style.color = "var(--warn)";
+      return;
+    }
+    if (!ssid) {
+      wifiMsgEl.textContent = "Cần nhập tên mạng WiFi";
+      wifiMsgEl.style.color = "var(--warn)";
+      return;
+    }
+    
+    wifiSaveBtnEl.disabled = true;
+    wifiSaveBtnEl.textContent = "Đang lưu cấu hình...";
+    
+    try {
+      const res = await fetch(base + "/wifi-config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Key": deviceKey
+        },
+        body: JSON.stringify({ ssid: ssid, password: pass })
+      });
+      if (!res.ok) throw new Error("Lưu thất bại. Kiểm tra lại Device Key.");
+      wifiMsgEl.textContent = "Đã lưu! Thiết bị đang khởi động lại vào mạng mới.";
+      wifiMsgEl.style.color = "var(--safe)";
+    } catch (e) {
+      wifiMsgEl.textContent = e.message;
+      wifiMsgEl.style.color = "var(--danger)";
+    } finally {
+      wifiSaveBtnEl.disabled = false;
+      wifiSaveBtnEl.textContent = "Lưu & Kết Nối Lại";
+    }
+  });
 </script>
 
 <script>
@@ -1556,6 +1686,31 @@ body.page-leaving {
   });
 })();
 </script>
+<script>
+(() => {
+  if (typeof Lenis !== 'undefined') {
+    const lenis = new Lenis({
+      duration: 0.9,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      syncTouch: false,
+    });
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+  }
 
+  let timers = new WeakMap();
+  document.addEventListener('scroll', (e) => {
+    const el = e.target;
+    if (!(el instanceof Element)) return;
+    el.classList.add('is-scrolling');
+    clearTimeout(timers.get(el));
+    timers.set(el, setTimeout(() => el.classList.remove('is-scrolling'), 900));
+  }, true);
+})();
+</script>
 </body>
 </html>
