@@ -10,7 +10,7 @@
 #include "esp_task_wdt.h"
 #include "esp_ota_ops.h"
 #include "secrets.h"
-#define FIRMWARE_VERSION "1.0.2"
+#define FIRMWARE_VERSION "1.0.3"
 #define WDT_TIMEOUT_SEC 15
 #define BOOT_CONFIRM_WINDOW_MS 36000UL
 #define BOOT_FAIL_ROLLBACK_THRESHOLD 5
@@ -236,11 +236,12 @@ bool reportOtaCheckin(bool ok, const char* version) {
   http.begin(OTA_CHECKIN_URL);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Key", DEVICE_KEY_VALUE);
-  String payload = "{";
-  payload += "\"deviceId\":\"" + String(DEVICE_ID) + "\",";
-  payload += "\"version\":\"" + String(version) + "\",";
-  payload += "\"ok\":" + String(ok ? "true" : "false");
-  payload += "}";
+  StaticJsonDocument<256> doc;
+  doc["deviceId"] = DEVICE_ID;
+  doc["version"] = version;
+  doc["ok"] = ok;
+  String payload;
+  serializeJson(doc, payload);
   int httpCode = http.POST(payload);
   http.end();
   return httpCode > 0 && httpCode < 400;
@@ -373,11 +374,12 @@ void sendTelegramAlert(int distance, const char* level) {
   http.begin(ALERT_WORKER_URL);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Key", DEVICE_KEY_VALUE);
-  String payload = "{";
-  payload += "\"deviceId\":\"" + String(DEVICE_ID) + "\",";
-  payload += "\"distance\":" + String(distance) + ",";
-  payload += "\"level\":\"" + String(level) + "\"";
-  payload += "}";
+  StaticJsonDocument<256> doc;
+  doc["deviceId"] = DEVICE_ID;
+  doc["distance"] = distance;
+  doc["level"] = level;
+  String payload;
+  serializeJson(doc, payload);
   int httpCode = http.POST(payload);
   if (httpCode > 0) {
     Serial.printf("Telegram alert gui: %d - %s\n", httpCode, http.getString().c_str());
@@ -417,12 +419,13 @@ bool sendLogPayload(int distance, float rate, const char* level) {
   http.begin(LOG_WORKER_URL);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Key", DEVICE_KEY_VALUE);
-  String payload = "{";
-  payload += "\"deviceId\":\"" + String(DEVICE_ID) + "\",";
-  payload += "\"distance\":" + String(distance) + ",";
-  payload += "\"rate\":" + String(rate, 2) + ",";
-  payload += "\"level\":\"" + String(level) + "\"";
-  payload += "}";
+  StaticJsonDocument<256> doc;
+  doc["deviceId"] = DEVICE_ID;
+  doc["distance"] = distance;
+  doc["rate"] = serialized(String(rate, 2));
+  doc["level"] = level;
+  String payload;
+  serializeJson(doc, payload);
   int httpCode = http.POST(payload);
   bool ok = httpCode > 0 && httpCode < 400;
   if (ok) {
@@ -803,40 +806,59 @@ void addCorsHeaders() {
 }
 void handleData() {
   addCorsHeaders();
-  String json = "{";
-  json += "\"distance\":" + String(currentDistance) + ",";
-  json += "\"stableDistance\":" + String(currentFilteredDistance) + ",";
-  json += "\"rate\":" + String(currentRateCmPerMin, 2) + ",";
-  json += "\"eta\":" + (currentEta >= 0 ? String(currentEta, 1) : "null") + ",";
-  json += "\"pendingLogs\":" + String(pendingCount) + ",";
-  json += "\"timestamp\":" + String(lastUpdateMillis);
-  json += "}";
+  StaticJsonDocument<256> doc;
+  doc["distance"] = currentDistance;
+  doc["stableDistance"] = currentFilteredDistance;
+  doc["rate"] = serialized(String(currentRateCmPerMin, 2));
+  if (currentEta >= 0) doc["eta"] = serialized(String(currentEta, 1));
+  else doc["eta"] = nullptr;
+  doc["pendingLogs"] = pendingCount;
+  doc["timestamp"] = lastUpdateMillis;
+  String json;
+  serializeJson(doc, json);
   server.send(200, "application/json", json);
 }
 void handleHistory() {
   addCorsHeaders();
-  String json = "[";
+  DynamicJsonDocument doc(1024);
+  JsonArray arr = doc.to<JsonArray>();
   for (int i = 0; i < historyCount; i++) {
     int idx = (historyHead - historyCount + i + HISTORY_SIZE) % HISTORY_SIZE;
-    json += String(historyBuf[idx]);
-    if (i < historyCount - 1) json += ",";
+    arr.add(historyBuf[idx]);
   }
-  json += "]";
+  String json;
+  serializeJson(doc, json);
   server.send(200, "application/json", json);
 }
 void handleHistoryFiltered() {
   addCorsHeaders();
-  String json = "[";
+  DynamicJsonDocument doc(1024);
+  JsonArray arr = doc.to<JsonArray>();
   for (int i = 0; i < filteredHistoryCount; i++) {
     int idx = (filteredHistoryHead - filteredHistoryCount + i + HISTORY_SIZE) % HISTORY_SIZE;
-    json += String(filteredHistoryBuf[idx]);
-    if (i < filteredHistoryCount - 1) json += ",";
+    arr.add(filteredHistoryBuf[idx]);
   }
-  json += "]";
+  String json;
+  serializeJson(doc, json);
   server.send(200, "application/json", json);
 }
+// So sanh hai chuoi theo kieu "constant-time" de tranh timing attack:
+// luon duyet het chieu dai toi da thay vi dung som khi gap ky tu sai,
+// nen thoi gian chay khong tiet lo key dung toi dau.
+bool constantTimeEquals(const String& a, const String& b) {
+  size_t lenA = a.length();
+  size_t lenB = b.length();
+  uint8_t diff = (lenA == lenB) ? 0 : 1;
+  size_t maxLen = (lenA > lenB) ? lenA : lenB;
+  for (size_t i = 0; i < maxLen; i++) {
+    uint8_t ca = (i < lenA) ? (uint8_t)a[i] : 0;
+    uint8_t cb = (i < lenB) ? (uint8_t)b[i] : 0;
+    diff |= (ca ^ cb);
+  }
+  return diff == 0;
+}
 bool checkDeviceKey() {
-  if (!server.hasHeader("X-Device-Key") || server.header("X-Device-Key") != DEVICE_KEY_VALUE) {
+  if (!server.hasHeader("X-Device-Key") || !constantTimeEquals(server.header("X-Device-Key"), DEVICE_KEY_VALUE)) {
     server.send(401, "application/json", "{\"error\":\"invalid device key\"}");
     return false;
   }
@@ -844,11 +866,16 @@ bool checkDeviceKey() {
 }
 void handleWifiStatus() {
   addCorsHeaders();
-  String json = "{";
-  json += "\"connected\":" + String(WiFi.status() == WL_CONNECTED ? "true" : "false") + ",";
-  json += "\"ssid\":\"" + getSavedSSID() + "\",";
-  json += "\"ip\":\"" + (WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : String("")) + "\"";
-  json += "}";
+  StaticJsonDocument<256> doc;
+  bool connected = WiFi.status() == WL_CONNECTED;
+  doc["connected"] = connected;
+  // SSID do nguoi dung tu nhap qua /wifi-config nen co the chua ky tu
+  // dac biet (vd dau ngoac kep) - de ArduinoJson tu escape thay vi noi
+  // chuoi tay, tranh lam hong cau truc JSON tra ve.
+  doc["ssid"] = getSavedSSID();
+  doc["ip"] = connected ? WiFi.localIP().toString() : String("");
+  String json;
+  serializeJson(doc, json);
   server.send(200, "application/json", json);
 }
 void handleWifiConfig() {
@@ -1008,7 +1035,7 @@ void setup() {
   handleBootRollbackCheck();
 
   WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP("ESP32_WaterLevel", "12345678", 1, 0, 4);
+  WiFi.softAP("ESP32_WaterLevel", AP_PASSWORD, 1, 0, 4);
   String ssid = getSavedSSID();
   String pass = getSavedPassword();
   applyStaticIpIfSet();
