@@ -9,8 +9,8 @@
 #include <Preferences.h>
 #include "esp_task_wdt.h"
 #include "esp_ota_ops.h"
-#include "secrets.h"
-#define FIRMWARE_VERSION "1.0.3"
+#include "confidential.h"
+#define FIRMWARE_VERSION "1.0.4"
 #define WDT_TIMEOUT_SEC 15
 #define BOOT_CONFIRM_WINDOW_MS 36000UL
 #define BOOT_FAIL_ROLLBACK_THRESHOLD 5
@@ -31,7 +31,7 @@ const char* LOG_WORKER_URL      = "https://waterlevelmonitor.luumanhkien08092006
 const char* SETTINGS_WORKER_URL = "https://waterlevelmonitor.luumanhkien08092006.workers.dev/get-settings";
 const char* OTA_ACTIVE_URL      = "https://waterlevelmonitor.luumanhkien08092006.workers.dev/ota/active";
 const char* OTA_CHECKIN_URL     = "https://waterlevelmonitor.luumanhkien08092006.workers.dev/ota/checkin";
-const char* DEVICE_ID = "mahirun";
+const char* DEVICE_ID = "HCSR04";
 const char* DEVICE_KEY_VALUE = DEVICE_KEY_SECRET;
 String lastSentLevel = "";
 const float LOG_CHANGE_THRESHOLD = 3.0;

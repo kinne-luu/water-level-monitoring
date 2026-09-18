@@ -845,7 +845,7 @@
             <option value="danger">Nguy hiểm</option>
             <option value="error">Lỗi</option>
           </select>
-          <input type="text" id="deviceFilter" class="filter-input" placeholder="Lọc theo device_id">
+          <input type="text" id="deviceFilter" class="filter-input" placeholder="Lọc theo device_id" autocomplete="off">
           <button id="refreshBtn" class="btn btn-refresh">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
             Làm mới
@@ -1044,6 +1044,22 @@
   workerUrlInputEl.value = workerBaseUrl;
   deviceKeyInputEl.value = deviceKey;
 
+  // deviceId: đọc từ localStorage, mặc định HCSR04 (id thiết bị hiện tại).
+  // Ghi đè bất kỳ giá trị cũ nào trình duyệt có thể tự autofill vào ô này.
+  const DEFAULT_DEVICE_ID = "HCSR04";
+  let currentDeviceId = localStorage.getItem("deviceId") || DEFAULT_DEVICE_ID;
+  deviceFilterEl.value = currentDeviceId;
+  localStorage.setItem("deviceId", currentDeviceId);
+  function syncDeviceIdFromField() {
+    currentDeviceId = deviceFilterEl.value.trim() || DEFAULT_DEVICE_ID;
+    localStorage.setItem("deviceId", currentDeviceId);
+  }
+  // "input" bắt lúc gõ tay; "change"/"blur" bắt các trường hợp trình duyệt
+  // tự autofill mà không bắn sự kiện input (khiến DOM lệch khỏi biến này).
+  deviceFilterEl.addEventListener("input", syncDeviceIdFromField);
+  deviceFilterEl.addEventListener("change", syncDeviceIdFromField);
+  deviceFilterEl.addEventListener("blur", syncDeviceIdFromField);
+
   const DEFAULT_THRESHOLDS = { danger: 15, warn: 40, detect: 180 };
   function loadThresholds() {
     try {
@@ -1084,7 +1100,7 @@
         const res = await fetch(workerBaseUrl + "/setting-log", {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-Device-Key": deviceKey },
-          body: JSON.stringify({ danger, warn, detect, deviceId: deviceFilterEl.value.trim() || "mahirun" })
+          body: JSON.stringify({ danger, warn, detect, deviceId: currentDeviceId || "HCSR04" })
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
         thresholdStatusEl.textContent = "Đã lưu ngưỡng và ghi log lên máy chủ.";
@@ -1304,7 +1320,7 @@
   let otaLastList = [];
 
   function otaDeviceId() {
-    return deviceFilterEl.value.trim() || "mahirun";
+    return currentDeviceId || "HCSR04";
   }
 
   const otaCheckinBoxEl = document.getElementById("otaCheckinBox");
@@ -1370,6 +1386,7 @@
       return;
     }
     otaModalEl.classList.add("open");
+    deviceFilterEl.value = currentDeviceId; // ép lại UI về đúng giá trị đã lưu, chống autofill ghi đè ngầm
     otaRefreshList();
   });
   otaCloseBtnEl.addEventListener("click", () => otaModalEl.classList.remove("open"));
