@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
-<title>Hệ Thống Giám Sát Mực Nước Realtime</title>
+<title>Hệ Thống Giám Sát Mực Nước</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
   :root {
     --safe: #30d158;
@@ -862,7 +863,7 @@
       </div>
       <div class="ip-config">
         <input type="text" id="espIpInput" value="192.168.4.1" placeholder="IP ESP32" inputmode="numeric">
-        <button id="espIpSaveBtn">Kết nối</button>
+        <button id="espIpSaveBtn">Lưu IP</button>
       </div>
     </div>
   </header>
@@ -899,7 +900,7 @@
 
       <div class="info-bar">
         <span>Cập nhật: <strong id="timestamp">--:--:--</strong></span>
-        <span>Nguồn: <strong id="sourceLabel">192.168.4.1</strong></span>
+        <span>Nguồn: <strong id="sourceLabel">HiveMQ Cloud</strong></span>
       </div>
 
       <div class="alerts-stack">
@@ -1022,7 +1023,6 @@
   const DANGER_THRESHOLD = 15;
   const WARN_THRESHOLD = 40;
   const MAX_CHART_POINTS = 30;
-  const POLL_MS = 1000;
 
   const distanceValueEl = document.getElementById("distanceValue");
   const gaugeFillEl = document.getElementById("gaugeFill");
@@ -1056,7 +1056,7 @@
 
   let waveOffset = 0;
   gaugeLabelFarEl.textContent = `Xa`;
-  messageBoxEl.textContent = "Chưa kết nối thiết bị...";
+  messageBoxEl.textContent = "Đang kết nối MQTT Broker...";
 
   let rawChartData = [];
   let rawChartDisplay = [];
@@ -1244,7 +1244,7 @@
   }
 
   function classify(distance) {
-    if (distance <= 0) {
+    if (distance < 0) {
       return { level: "error", color: "#8e8e93", label: "Cảm biến lỗi", message: "Không đọc được dữ liệu cảm biến." };
     } else if (distance <= DANGER_THRESHOLD) {
       return { level: "danger", color: "#ff453a", label: "Nguy hiểm — gần tràn", message: "Mực nước dâng sát cảm biến (dưới 15cm) - Cảnh báo khẩn cấp!" };
@@ -1272,7 +1272,7 @@
 
   function updateUI(data) {
     const distance = Number(data.distance);
-    const rate = data.rate || 0;
+    const rate = data.rate ? parseFloat(data.rate) : 0;
     const info = classify(distance);
     const currentTimeStr = new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -1337,11 +1337,6 @@
   animateWave();
 
   let espBaseUrl = localStorage.getItem("espBaseUrl") || "http://192.168.4.1";
-  let pollTimer = null;
-  let tickTimer = null;
-  let latestData = null;
-  let hasReceivedData = false;
-
   espIpInputEl.value = espBaseUrl.replace(/^https?:\/\//, "");
 
   function normalizeToUrl(raw) {
@@ -1351,51 +1346,74 @@
     return v.replace(/\/+$/, "");
   }
 
-  async function pollData() {
-    if (!espBaseUrl) return;
-    try {
-      const res = await fetch(espBaseUrl + "/data", { cache: "no-store", mode: 'cors' });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-      connStatusEl.textContent = "● Online";
-      connStatusEl.style.color = "var(--safe)";
-      latestData = data;
-      hasReceivedData = true;
-    } catch (e) {
-      connStatusEl.textContent = "✕ Mất kết nối ESP32";
-      connStatusEl.style.color = "var(--danger)";
-    }
-  }
-
-  function tick() {
-    if (!hasReceivedData || !latestData) return;
-    updateUI(latestData);
-  }
-
-  function startPolling() {
-    if (pollTimer) clearInterval(pollTimer);
-    if (tickTimer) clearInterval(tickTimer);
-    connStatusEl.textContent = "○ Đang kết nối...";
-    connStatusEl.style.color = "var(--warn)";
-    sourceLabelEl.textContent = espBaseUrl.replace(/^https?:\/\//, "");
-    hasReceivedData = false;
-    pollData();
-    pollTimer = setInterval(pollData, POLL_MS);
-    tickTimer = setInterval(tick, 1000);
-  }
-
   espIpSaveBtnEl.addEventListener("click", () => {
     const url = normalizeToUrl(espIpInputEl.value);
     if (!url) return;
     espBaseUrl = url;
     localStorage.setItem("espBaseUrl", espBaseUrl);
-    startPolling();
   });
 
   espIpInputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter") espIpSaveBtnEl.click();
   });
-  startPolling();
+
+  const MQTT_BROKER_WSS = "wss://f730af260a314bd6b762801931a0ed1e.s1.eu.hivemq.cloud:8884/mqtt";
+  const MQTT_OPTIONS = {
+    clean: true,
+    connectTimeout: 5000,
+    clientId: "WebMonitor_" + Math.random().toString(16).substring(2, 10),
+    username: "waterlevel",
+    password: "waterlevel"
+  };
+
+  connStatusEl.textContent = "○ Đang kết nối MQTT...";
+  connStatusEl.style.color = "var(--warn)";
+
+  const mqttClient = mqtt.connect(MQTT_BROKER_WSS, MQTT_OPTIONS);
+
+  mqttClient.on("connect", () => {
+    connStatusEl.textContent = "● Realtime";
+    connStatusEl.style.color = "var(--safe)";
+    sourceLabelEl.textContent = "HiveMQ Cloud";
+    mqttClient.subscribe("waterlevel/HCSR04/telemetry");
+    mqttClient.subscribe("waterlevel/HCSR04/status");
+  });
+
+  mqttClient.on("message", (topic, message) => {
+    if (topic === "waterlevel/HCSR04/status") {
+      const status = message.toString();
+      if (status === "offline") {
+        connStatusEl.textContent = "✕ ESP32 Offline";
+        connStatusEl.style.color = "var(--danger)";
+        statusBadgeEl.style.background = "rgba(239, 68, 68, 0.15)";
+        statusBadgeEl.style.color = "var(--danger)";
+        statusBadgeEl.style.border = "1px solid rgba(239, 68, 68, 0.35)";
+        statusTextEl.textContent = "Thiết bị ngoại tuyến";
+        statusBadgeEl.querySelector(".dot").style.background = "var(--danger)";
+      } else if (status === "online") {
+        connStatusEl.textContent = "● Realtime";
+        connStatusEl.style.color = "var(--safe)";
+      }
+      return;
+    }
+
+    if (topic === "waterlevel/HCSR04/telemetry") {
+      try {
+        const data = JSON.parse(message.toString());
+        updateUI(data);
+      } catch (e) {}
+    }
+  });
+
+  mqttClient.on("close", () => {
+    connStatusEl.textContent = "✕ Mất kết nối Broker";
+    connStatusEl.style.color = "var(--danger)";
+  });
+
+  mqttClient.on("error", () => {
+    connStatusEl.textContent = "✕ Lỗi MQTT";
+    connStatusEl.style.color = "var(--danger)";
+  });
 
   const MAX_HISTORY_POINTS = 100;
   let waterHistory = [];

@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
 #include <WebServer.h>
 #include <HTTPClient.h>
 #include <Update.h>
@@ -10,8 +12,10 @@
 #include "esp_task_wdt.h"
 #include "esp_ota_ops.h"
 #include "confidential.h"
-#define FIRMWARE_VERSION "1.0.4"
-#define WDT_TIMEOUT_SEC 15
+
+#define FIRMWARE_VERSION "1.0.6"
+#define ENABLE_OTA_VERSION_CHECK 1
+#define WDT_TIMEOUT_SEC 25
 #define BOOT_CONFIRM_WINDOW_MS 36000UL
 #define BOOT_FAIL_ROLLBACK_THRESHOLD 5
 #define TRIG_PIN 5
@@ -21,6 +25,9 @@
 #define LED_RED 27
 #define BUZZER_PIN 19
 #define LED_WIFI 2
+#define I2C_SDA 21
+#define I2C_SCL 22
+
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 float DANGER_THRESHOLD = 15.0;
 float WARN_THRESHOLD   = 40.0;
@@ -63,40 +70,59 @@ SemaphoreHandle_t netMutex;
 volatile bool alertPending = false;
 int alertDistanceShared = -1;
 char alertLevelShared[8] = "";
+
+WiFiClientSecure tlsClient;
+PubSubClient mqttClient(tlsClient);
+unsigned long lastMqttRetry = 0;
+bool wasMqttConnected = false;
+
+void lcdPrintPadded(uint8_t col, uint8_t row, const char* text) {
+  lcd.setCursor(col, row);
+  char buf[17];
+  snprintf(buf, sizeof(buf), "%-16s", text);
+  lcd.print(buf);
+}
+
 void triggerAlert(int distance, const char* level) {
-  xSemaphoreTake(netMutex, portMAX_DELAY);
+  if (xSemaphoreTake(netMutex, pdMS_TO_TICKS(200)) != pdTRUE) return;
   alertPending = true;
   alertDistanceShared = distance;
   strncpy(alertLevelShared, level, sizeof(alertLevelShared) - 1);
   alertLevelShared[sizeof(alertLevelShared) - 1] = '\0';
   xSemaphoreGive(netMutex);
 }
+
 const unsigned long READ_INTERVAL = 1000;
 unsigned long lastRead = 0;
+
 String getSavedSSID() {
   prefs.begin("wifi", true);
   String s = prefs.getString("ssid", WIFI_SSID);
   prefs.end();
   return s;
 }
+
 String getSavedPassword() {
   prefs.begin("wifi", true);
   String p = prefs.getString("pass", WIFI_PASSWORD);
   prefs.end();
   return p;
 }
+
 String getSavedStaticIp() {
   prefs.begin("wifi", true);
   String v = prefs.getString("ip", "");
   prefs.end();
   return v;
 }
+
 String getSavedGateway() {
   prefs.begin("wifi", true);
   String v = prefs.getString("gw", "");
   prefs.end();
   return v;
 }
+
 bool applyStaticIpIfSet() {
   String ipStr = getSavedStaticIp();
   String gwStr = getSavedGateway();
@@ -106,10 +132,12 @@ bool applyStaticIpIfSet() {
   if (gwStr.length() > 0) gw.fromString(gwStr); else gw = ip;
   return WiFi.config(ip, gw, subnet);
 }
+
 const int FILTER_SIZE_STABLE = 5;
 int filterBufStable[FILTER_SIZE_STABLE];
 int filterIndexStable = 0;
 bool filterFilledStable = false;
+
 int pushAndSmoothStable(int rawValue) {
   filterBufStable[filterIndexStable] = rawValue;
   filterIndexStable = (filterIndexStable + 1) % FILTER_SIZE_STABLE;
@@ -119,10 +147,12 @@ int pushAndSmoothStable(int rawValue) {
   for (int i = 0; i < count; i++) sum += filterBufStable[i];
   return (int)(sum / count);
 }
+
 int lastRateDistance = -1;
 unsigned long lastRateCheckTime = 0;
 const unsigned long RATE_WINDOW = 5000;
 float currentRateCmPerMin = 0;
+
 void updateRate(int distance) {
   unsigned long now = millis();
   if (lastRateDistance < 0) {
@@ -138,12 +168,14 @@ void updateRate(int distance) {
     lastRateCheckTime = now;
   }
 }
+
 float estimateMinutesToDanger(int currentDistance) {
   if (currentRateCmPerMin >= -0.5) return -1;
   if (currentDistance <= DANGER_THRESHOLD && currentDistance > 0) return 0;
   float remainingDistance = currentDistance - DANGER_THRESHOLD;
   return remainingDistance / (-currentRateCmPerMin);
 }
+
 int currentDistance = -1;
 int currentFilteredDistance = -1;
 float currentEta = -1;
@@ -155,18 +187,22 @@ int historyHead = 0;
 int filteredHistoryBuf[HISTORY_SIZE];
 int filteredHistoryCount = 0;
 int filteredHistoryHead = 0;
+
 void pushFilteredHistory(int distance) {
   filteredHistoryBuf[filteredHistoryHead] = distance;
   filteredHistoryHead = (filteredHistoryHead + 1) % HISTORY_SIZE;
   if (filteredHistoryCount < HISTORY_SIZE) filteredHistoryCount++;
 }
+
 bool isBuzzerOn = false;
+
 void buzzerAlert(unsigned int freq) {
   if (!isBuzzerOn) {
     tone(BUZZER_PIN, freq);
     isBuzzerOn = true;
   }
 }
+
 void buzzerStop() {
   if (isBuzzerOn) {
     noTone(BUZZER_PIN);
@@ -174,11 +210,13 @@ void buzzerStop() {
     isBuzzerOn = false;
   }
 }
+
 void pushHistory(int distance) {
   historyBuf[historyHead] = distance;
   historyHead = (historyHead + 1) % HISTORY_SIZE;
   if (historyCount < HISTORY_SIZE) historyCount++;
 }
+
 int measureDistanceRaw() {
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
@@ -189,6 +227,7 @@ int measureDistanceRaw() {
   if (duration == 0) return -1;
   return duration * 0.034 / 2;
 }
+
 const char* levelFromDistance(int distance) {
   if (distance < 0) return "error";
   if (distance <= DANGER_THRESHOLD) return "danger";
@@ -196,6 +235,7 @@ const char* levelFromDistance(int distance) {
   if (distance <= DETECT_THRESHOLD) return "detect";
   return "safe";
 }
+
 void fetchThresholdsFromServer() {
   if (WiFi.status() != WL_CONNECTED) return;
   HTTPClient http;
@@ -229,6 +269,7 @@ void fetchThresholdsFromServer() {
   }
   http.end();
 }
+
 bool reportOtaCheckin(bool ok, const char* version) {
   if (WiFi.status() != WL_CONNECTED) return false;
   HTTPClient http;
@@ -246,6 +287,7 @@ bool reportOtaCheckin(bool ok, const char* version) {
   http.end();
   return httpCode > 0 && httpCode < 400;
 }
+
 bool performOta(const String& url, size_t expectedSize) {
   if (WiFi.status() != WL_CONNECTED) return false;
   HTTPClient http;
@@ -303,6 +345,7 @@ bool performOta(const String& url, size_t expectedSize) {
   Serial.println("OTA: flash thanh cong, khoi dong lai...");
   return true;
 }
+
 void checkForOta() {
   if (otaInProgress || WiFi.status() != WL_CONNECTED) return;
   HTTPClient http;
@@ -329,10 +372,8 @@ void checkForOta() {
   Serial.printf("OTA: phat hien ban moi %s (dang chay %s), bat dau tai...\n",
                 remoteVersion.c_str(), FIRMWARE_VERSION);
   otaInProgress = true;
-  lcd.setCursor(0, 0);
-  lcd.print("Dang cap nhat...");
-  lcd.setCursor(0, 1);
-  lcd.print("Vui long doi    ");
+  lcdPrintPadded(0, 0, "Dang cap nhat...");
+  lcdPrintPadded(0, 1, "Vui long doi    ");
   buzzerStop();
   bool ok = performOta(fwUrl, remoteSize);
   if (ok) {
@@ -352,20 +393,19 @@ void checkForOta() {
       otaLastFailedVersion = remoteVersion;
       otaFailCount = 1;
     }
-    lcd.setCursor(0, 0);
-    lcd.print("Cap nhat that bai");
-    lcd.setCursor(0, 1);
+    lcdPrintPadded(0, 0, "Cap nhat that bai");
     if (otaFailCount >= OTA_MAX_FAIL) {
-      lcd.print("Da tam dung OTA ");
+      lcdPrintPadded(0, 1, "Da tam dung OTA ");
       Serial.printf("OTA: that bai %d lan voi ban %s, tam dung ~10 phut.\n",
                     otaFailCount, remoteVersion.c_str());
       lastOtaCheck = millis() + OTA_BACKOFF_MS - OTA_CHECK_INTERVAL_MS;
     } else {
-      lcd.print("Van chay ban cu ");
+      lcdPrintPadded(0, 1, "Van chay ban cu ");
     }
     delay(2000);
   }
 }
+
 void sendTelegramAlert(int distance, const char* level) {
   if (lastSentLevel == level) return;
   if (WiFi.status() != WL_CONNECTED) return;
@@ -389,6 +429,7 @@ void sendTelegramAlert(int distance, const char* level) {
   }
   http.end();
 }
+
 struct PendingLog {
   unsigned long capturedAtMs;
   int distance;
@@ -398,6 +439,7 @@ struct PendingLog {
 const int PENDING_QUEUE_SIZE = 40;
 PendingLog pendingQueue[PENDING_QUEUE_SIZE];
 int pendingCount = 0;
+
 void queuePendingLog(int distance, float rate, const char* level) {
   if (pendingCount >= PENDING_QUEUE_SIZE) {
     for (int i = 1; i < PENDING_QUEUE_SIZE; i++) pendingQueue[i - 1] = pendingQueue[i];
@@ -412,6 +454,7 @@ void queuePendingLog(int distance, float rate, const char* level) {
   p.level[sizeof(p.level) - 1] = '\0';
   pendingCount++;
 }
+
 bool sendLogPayload(int distance, float rate, const char* level) {
   if (WiFi.status() != WL_CONNECTED) return false;
   HTTPClient http;
@@ -438,6 +481,7 @@ bool sendLogPayload(int distance, float rate, const char* level) {
   http.end();
   return ok;
 }
+
 const int MAX_LOGS_PER_FLUSH = 8;
 void flushPendingLogs() {
   if (WiFi.status() != WL_CONNECTED) return;
@@ -460,6 +504,7 @@ void flushPendingLogs() {
     processed++;
   }
 }
+
 void sendLogToD1(int distance, const char* level) {
   unsigned long now = millis();
   bool changedEnough = abs(distance - lastLoggedDistance) >= LOG_CHANGE_THRESHOLD;
@@ -480,18 +525,69 @@ void sendLogToD1(int distance, const char* level) {
   lastLoggedDistance = distance;
   lastLoggedLevel = level;
   lastLogTime = now;
-  xSemaphoreTake(netMutex, portMAX_DELAY);
+  if (xSemaphoreTake(netMutex, pdMS_TO_TICKS(200)) != pdTRUE) return; 
   queuePendingLog(distance, currentRateCmPerMin, level);
   xSemaphoreGive(netMutex);
 }
+
+void publishMqttTelemetry(int distance, int stableDist, float rate, const char* level) {
+  if (xSemaphoreTake(netMutex, pdMS_TO_TICKS(200)) != pdTRUE) return; 
+  if (mqttClient.connected()) {
+    StaticJsonDocument<256> doc;
+    doc["distance"] = distance;
+    doc["stableDistance"] = stableDist;
+    doc["rate"] = serialized(String(rate, 2));
+    doc["level"] = level;
+    if (currentEta >= 0) doc["eta"] = serialized(String(currentEta, 1));
+    doc["timestamp"] = millis();
+    char buf[512];
+    size_t len = serializeJson(doc, buf);
+    bool pubOk = mqttClient.publish(MQTT_TOPIC_PUB, (uint8_t*)buf, len, false);
+    if (!pubOk) {
+      Serial.printf("MQTT: publish that bai, rc=%d, len=%u\n", mqttClient.state(), (unsigned)len);
+    }
+  }
+  xSemaphoreGive(netMutex);
+}
+
+void handleMqttLoop() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  unsigned long now = millis();
+  xSemaphoreTake(netMutex, portMAX_DELAY);
+  if (!mqttClient.connected()) {
+    if (wasMqttConnected) {
+      Serial.printf("MQTT: Mat ket noi! rc=%d\n", mqttClient.state());
+      wasMqttConnected = false;
+    }
+    if (now - lastMqttRetry >= 5000) {
+      lastMqttRetry = now;
+      tlsClient.setInsecure();
+      tlsClient.setTimeout(3000);
+      Serial.println("MQTT: Dang thu ket noi...");
+      unsigned long connStart = millis();
+      bool connOk = mqttClient.connect(DEVICE_ID, MQTT_USER, MQTT_PASS, MQTT_TOPIC_LWT, 1, true, "offline");
+      Serial.printf("MQTT: connect() mat %lu ms\n", millis() - connStart);
+      if (connOk) {
+        Serial.println("MQTT: Da ket noi HiveMQ Cloud");
+        mqttClient.publish(MQTT_TOPIC_LWT, "online", true);
+        wasMqttConnected = true;
+      } else {
+        Serial.printf("MQTT: Ket noi that bai, rc=%d\n", mqttClient.state());
+      }
+    }
+  } else {
+    mqttClient.loop();
+  }
+  xSemaphoreGive(netMutex);
+}
+
 void updateOutputs(int distance, float etaMinutes) {
-  lcd.setCursor(0, 0);
   char line0[17];
   snprintf(line0, sizeof(line0), "Muc nuoc:%4dcm", distance);
-  lcd.print(line0);
-  lcd.setCursor(0, 1);
+  lcdPrintPadded(0, 0, line0);
+  
   if (distance > 0 && distance <= DANGER_THRESHOLD) {
-    lcd.print("NGUY HIEM: DAY! ");
+    lcdPrintPadded(0, 1, "NGUY HIEM: DAY! ");
     digitalWrite(LED_RED, HIGH);
     digitalWrite(LED_YELLOW, LOW);
     digitalWrite(LED_GREEN, LOW);
@@ -499,7 +595,7 @@ void updateOutputs(int distance, float etaMinutes) {
     triggerAlert(distance, "danger");
   }
   else if (distance > DANGER_THRESHOLD && distance <= WARN_THRESHOLD) {
-    lcd.print("Muc trung binh  ");
+    lcdPrintPadded(0, 1, "Muc trung binh  ");
     digitalWrite(LED_RED, LOW);
     digitalWrite(LED_YELLOW, HIGH);
     digitalWrite(LED_GREEN, LOW);
@@ -507,7 +603,7 @@ void updateOutputs(int distance, float etaMinutes) {
     triggerAlert(distance, "warn");
   }
   else if (distance > WARN_THRESHOLD && distance <= DETECT_THRESHOLD) {
-    lcd.print("Phat hien nuoc  ");
+    lcdPrintPadded(0, 1, "Phat hien nuoc  ");
     digitalWrite(LED_RED, LOW);
     digitalWrite(LED_YELLOW, HIGH);
     digitalWrite(LED_GREEN, LOW);
@@ -515,7 +611,7 @@ void updateOutputs(int distance, float etaMinutes) {
     triggerAlert(distance, "detect");
   }
   else if (distance > DETECT_THRESHOLD) {
-    lcd.print("Muc an toan     ");
+    lcdPrintPadded(0, 1, "Muc an toan     ");
     digitalWrite(LED_RED, LOW);
     digitalWrite(LED_YELLOW, LOW);
     digitalWrite(LED_GREEN, HIGH);
@@ -523,17 +619,17 @@ void updateOutputs(int distance, float etaMinutes) {
     triggerAlert(distance, "safe");
   }
 }
+
 void showSensorError() {
-  lcd.setCursor(0, 0);
-  lcd.print("Loi cam bien!   ");
-  lcd.setCursor(0, 1);
-  lcd.print("Kiem tra day noi");
+  lcdPrintPadded(0, 0, "Loi cam bien!   ");
+  lcdPrintPadded(0, 1, "Kiem tra day noi");
   digitalWrite(LED_RED, HIGH);
   digitalWrite(LED_YELLOW, HIGH);
   digitalWrite(LED_GREEN, HIGH);
   buzzerStop();
   triggerAlert(-1, "error");
 }
+
 const char INDEX_HTML[] PROGMEM = R"HTMLPAGE(
 <!DOCTYPE html>
 <html lang="vi">
@@ -733,9 +829,7 @@ function drawChart(){
   const w = canvas.width = canvas.clientWidth * devicePixelRatio;
   const h = canvas.height = canvas.clientHeight * devicePixelRatio;
   ctx.clearRect(0,0,w,h);
-  // Duong xanh nhat (mo): gia tri da loc nhieu - doi cham/muot hon co y.
   drawSeries(lastFilteredHistory, '#38bdf866');
-  // Duong xanh dam: gia tri thuc te (raw) - doi ngay theo cam bien.
   drawSeries(lastRawHistory, '#38bdf8');
 }
 async function poll(){
@@ -789,6 +883,7 @@ setInterval(pollHistoryFiltered, 3000);
 </body>
 </html>
 )HTMLPAGE";
+
 String buildIndexPage() {
   String page = String(INDEX_HTML);
   page.replace("%DANGER%", String(DANGER_THRESHOLD, 1));
@@ -796,14 +891,17 @@ String buildIndexPage() {
   page.replace("%MAXD%", String(MAX_DISTANCE, 1));
   return page;
 }
+
 void handleRoot() {
   server.send(200, "text/html", buildIndexPage());
 }
+
 void addCorsHeaders() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   server.sendHeader("Access-Control-Allow-Headers", "*");
 }
+
 void handleData() {
   addCorsHeaders();
   StaticJsonDocument<256> doc;
@@ -818,6 +916,7 @@ void handleData() {
   serializeJson(doc, json);
   server.send(200, "application/json", json);
 }
+
 void handleHistory() {
   addCorsHeaders();
   DynamicJsonDocument doc(1024);
@@ -830,6 +929,7 @@ void handleHistory() {
   serializeJson(doc, json);
   server.send(200, "application/json", json);
 }
+
 void handleHistoryFiltered() {
   addCorsHeaders();
   DynamicJsonDocument doc(1024);
@@ -842,9 +942,7 @@ void handleHistoryFiltered() {
   serializeJson(doc, json);
   server.send(200, "application/json", json);
 }
-// So sanh hai chuoi theo kieu "constant-time" de tranh timing attack:
-// luon duyet het chieu dai toi da thay vi dung som khi gap ky tu sai,
-// nen thoi gian chay khong tiet lo key dung toi dau.
+
 bool constantTimeEquals(const String& a, const String& b) {
   size_t lenA = a.length();
   size_t lenB = b.length();
@@ -857,6 +955,7 @@ bool constantTimeEquals(const String& a, const String& b) {
   }
   return diff == 0;
 }
+
 bool checkDeviceKey() {
   if (!server.hasHeader("X-Device-Key") || !constantTimeEquals(server.header("X-Device-Key"), DEVICE_KEY_VALUE)) {
     server.send(401, "application/json", "{\"error\":\"invalid device key\"}");
@@ -864,20 +963,19 @@ bool checkDeviceKey() {
   }
   return true;
 }
+
 void handleWifiStatus() {
   addCorsHeaders();
   StaticJsonDocument<256> doc;
   bool connected = WiFi.status() == WL_CONNECTED;
   doc["connected"] = connected;
-  // SSID do nguoi dung tu nhap qua /wifi-config nen co the chua ky tu
-  // dac biet (vd dau ngoac kep) - de ArduinoJson tu escape thay vi noi
-  // chuoi tay, tranh lam hong cau truc JSON tra ve.
   doc["ssid"] = getSavedSSID();
   doc["ip"] = connected ? WiFi.localIP().toString() : String("");
   String json;
   serializeJson(doc, json);
   server.send(200, "application/json", json);
 }
+
 void handleWifiConfig() {
   addCorsHeaders();
   if (server.method() != HTTP_POST) { server.send(405, "text/plain", "Method not allowed"); return; }
@@ -905,6 +1003,7 @@ void handleWifiConfig() {
   delay(500);
   ESP.restart();
 }
+
 void setupWatchdog() {
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
   esp_task_wdt_config_t twdtConfig = {
@@ -922,10 +1021,8 @@ void setupWatchdog() {
 void rollbackToPreviousFirmware(const char* reason) {
   Serial.printf("ROLLBACK: %s\n", reason);
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Dang rollback...");
-  lcd.setCursor(0, 1);
-  lcd.print(reason);
+  lcdPrintPadded(0, 0, "Dang rollback...");
+  lcdPrintPadded(0, 1, reason);
 
   prefs.begin("otaboot", true);
   String pendingVer = prefs.getString("pendingVer", "");
@@ -988,18 +1085,19 @@ void handleBootRollbackCheck() {
 }
 
 void networkTask(void* pvParameters) {
-  esp_task_wdt_add(NULL);
   for (;;) {
-    esp_task_wdt_reset();
+    handleMqttLoop();
     if (!otaInProgress) {
       if (millis() - lastSettingsFetch >= SETTINGS_FETCH_INTERVAL_MS) {
         lastSettingsFetch = millis();
         fetchThresholdsFromServer();
       }
+#if ENABLE_OTA_VERSION_CHECK
       if (millis() - lastOtaCheck >= OTA_CHECK_INTERVAL_MS) {
         lastOtaCheck = millis();
         checkForOta();
       }
+#endif
     }
     if (!otaInProgress) {
       xSemaphoreTake(netMutex, portMAX_DELAY);
@@ -1012,9 +1110,10 @@ void networkTask(void* pvParameters) {
       if (doAlert) sendTelegramAlert(aDist, aLevel);
       flushPendingLogs();
     }
-    vTaskDelay(pdMS_TO_TICKS(300));
+    vTaskDelay(pdMS_TO_TICKS(50));
   }
 }
+
 void setup() {
   Serial.begin(115200);
   pinMode(TRIG_PIN, OUTPUT);
@@ -1025,10 +1124,17 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(LED_WIFI, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
+
+  Wire.begin(I2C_SDA, I2C_SCL);
+  Wire.setClock(100000);
+  delay(150);
+
   lcd.init();
+  delay(50);
   lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("Khoi dong...");
+  lcd.clear();
+  delay(20);
+  lcdPrintPadded(0, 0, "Khoi dong...");
 
   setupWatchdog();
   bootStartMs = millis();
@@ -1059,7 +1165,7 @@ void setup() {
       Serial.print(".");
     }
   }
-  lcd.clear();
+
   if (WiFi.status() == WL_CONNECTED) {
     digitalWrite(LED_WIFI, HIGH);
     Serial.println("\nWiFi nha: Da ket noi!");
@@ -1067,10 +1173,8 @@ void setup() {
     Serial.println(WiFi.localIP());
     Serial.print("IP AP du phong: ");
     Serial.println(WiFi.softAPIP());
-    lcd.setCursor(0, 0);
-    lcd.print("IP nha:         ");
-    lcd.setCursor(0, 1);
-    lcd.print(WiFi.localIP().toString());
+    lcdPrintPadded(0, 0, "IP nha:         ");
+    lcdPrintPadded(0, 1, WiFi.localIP().toString().c_str());
     fetchThresholdsFromServer();
     lastSettingsFetch = millis();
     bootWifiOk = true;
@@ -1079,12 +1183,17 @@ void setup() {
   } else {
     digitalWrite(LED_WIFI, LOW);
     Serial.println("\nKhong bat duoc WiFi nha, dung IP AP du phong: 192.168.4.1");
-    lcd.setCursor(0, 0);
-    lcd.print("Dung WiFi AP:   ");
-    lcd.setCursor(0, 1);
-    lcd.print("192.168.4.1     ");
+    lcdPrintPadded(0, 0, "Dung WiFi AP:   ");
+    lcdPrintPadded(0, 1, "192.168.4.1     ");
   }
   delay(2500);
+
+  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+  mqttClient.setBufferSize(512); 
+  mqttClient.setKeepAlive(30);
+  tlsClient.setInsecure();
+  tlsClient.setTimeout(5000);
+
   server.on("/", handleRoot);
   server.on("/data", handleData);
   server.on("/history", handleHistory);
@@ -1093,10 +1202,12 @@ void setup() {
   server.on("/wifi-config", HTTP_POST, handleWifiConfig);
   server.begin();
   Serial.println("Web server da khoi dong.");
+
   netMutex = xSemaphoreCreateMutex();
   xTaskCreatePinnedToCore(networkTask, "networkTask", 8192, NULL, 1, NULL, 0);
   lastRead = millis();
 }
+
 void loop() {
   esp_task_wdt_reset();
   server.handleClient();
@@ -1107,6 +1218,7 @@ void loop() {
       currentDistance = -1;
       showSensorError();
       sendLogToD1(-1, "error");
+      publishMqttTelemetry(-1, -1, 0, "error");
     } else {
       currentDistance = raw;
       bootSensorOk = true;
@@ -1118,6 +1230,7 @@ void loop() {
       pushHistory(currentDistance);
       pushFilteredHistory(currentFilteredDistance);
       sendLogToD1(currentFilteredDistance, levelFromDistance(currentFilteredDistance));
+      publishMqttTelemetry(currentDistance, currentFilteredDistance, currentRateCmPerMin, levelFromDistance(currentFilteredDistance));
     }
   }
   checkBootConfirmation();
