@@ -13,7 +13,7 @@
 #include "esp_ota_ops.h"
 #include "confidential.h"
 
-#define FIRMWARE_VERSION "1.0.6"
+#define FIRMWARE_VERSION "1.0.8"
 #define ENABLE_OTA_VERSION_CHECK 1
 #define WDT_TIMEOUT_SEC 25
 #define BOOT_CONFIRM_WINDOW_MS 36000UL
@@ -33,6 +33,9 @@ float DANGER_THRESHOLD = 15.0;
 float WARN_THRESHOLD   = 40.0;
 float DETECT_THRESHOLD = 180.0;
 const float MAX_DISTANCE = 400.0;
+const float DEFAULT_SENSOR_HEIGHT_CM = 200.0;
+float SENSOR_HEIGHT_CM = DEFAULT_SENSOR_HEIGHT_CM;
+float currentWaterLevel = -1;
 const char* ALERT_WORKER_URL    = "https://waterlevelmonitor.luumanhkien08092006.workers.dev/alert";
 const char* LOG_WORKER_URL      = "https://waterlevelmonitor.luumanhkien08092006.workers.dev/log";
 const char* SETTINGS_WORKER_URL = "https://waterlevelmonitor.luumanhkien08092006.workers.dev/get-settings";
@@ -42,8 +45,10 @@ const char* DEVICE_ID = "HCSR04";
 const char* DEVICE_KEY_VALUE = DEVICE_KEY_SECRET;
 String lastSentLevel = "";
 const float LOG_CHANGE_THRESHOLD = 3.0;
-const unsigned long HEARTBEAT_SAFE_MS = 10UL * 60UL * 1000UL;
-const unsigned long HEARTBEAT_DETECT_STABLE_MS = 1UL * 60UL * 1000UL;
+const unsigned long HEARTBEAT_SAFE_MS = 30UL * 60UL * 1000UL;
+const unsigned long HEARTBEAT_LIGHT_DETECT_MS = 15UL * 60UL * 1000UL;
+const unsigned long HEARTBEAT_DEEP_DETECT_MS = 1UL * 60UL * 1000UL;
+const float DEEP_DETECT_MARGIN_CM = 5.0;
 const unsigned long ACTIVE_CHANGE_WINDOW_MS = 60UL * 1000UL;
 int lastLoggedDistance = -9999;
 String lastLoggedLevel = "";
@@ -123,13 +128,38 @@ String getSavedGateway() {
   return v;
 }
 
+float getSavedSensorHeight() {
+  prefs.begin("sensorcfg", true);
+  float h = prefs.getFloat("height", DEFAULT_SENSOR_HEIGHT_CM);
+  prefs.end();
+  if (h <= 0 || h > MAX_DISTANCE) h = DEFAULT_SENSOR_HEIGHT_CM;
+  return h;
+}
+
+void saveSensorHeight(float heightCm) {
+  prefs.begin("sensorcfg", false);
+  prefs.putFloat("height", heightCm);
+  prefs.end();
+}
+
+// Tính mực nước dâng (so với đáy/mặt đất) dựa trên khoảng cách từ cảm biến
+// đến vật cản (mặt nước) và khoảng cách từ cảm biến đến mặt đất.
+// mucNuocDang = doCaoCamBien - khoangCachVatCan
+float computeWaterLevel(int obstacleDistance) {
+  if (obstacleDistance < 0) return -1;
+  float level = SENSOR_HEIGHT_CM - (float)obstacleDistance;
+  if (level < 0) level = 0;
+  if (level > SENSOR_HEIGHT_CM) level = SENSOR_HEIGHT_CM;
+  return level;
+}
+
 bool applyStaticIpIfSet() {
   String ipStr = getSavedStaticIp();
   String gwStr = getSavedGateway();
   if (ipStr.length() == 0) return false;
   IPAddress ip, gw, subnet(255, 255, 255, 0);
   if (!ip.fromString(ipStr)) return false;
-  if (gwStr.length() > 0) gw.fromString(gwStr); else gw = ip;
+  if (gwStr.length() == 0 || !gw.fromString(gwStr)) gw = ip;
   return WiFi.config(ip, gw, subnet);
 }
 
@@ -245,7 +275,7 @@ void fetchThresholdsFromServer() {
   int httpCode = http.GET();
   if (httpCode == 200) {
     String payload = http.getString();
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<320> doc;
     DeserializationError err = deserializeJson(doc, payload);
     if (!err && !doc["danger"].isNull() && !doc["warn"].isNull() && !doc["detect"].isNull()) {
       float d = doc["danger"];
@@ -262,6 +292,14 @@ void fetchThresholdsFromServer() {
         Serial.println("Nguong tu server khong hop le, bo qua.");
       }
     }
+    if (!doc["sensorHeight"].isNull()) {
+      float h = doc["sensorHeight"];
+      if (h > 0 && h <= MAX_DISTANCE && h != SENSOR_HEIGHT_CM) {
+        SENSOR_HEIGHT_CM = h;
+        saveSensorHeight(h);
+        Serial.printf("Da cap nhat do cao cam bien tu server: %.1f cm\n", h);
+      }
+    }
   } else if (httpCode > 0) {
     Serial.printf("Loi lay nguong: HTTP %d\n", httpCode);
   } else {
@@ -270,17 +308,40 @@ void fetchThresholdsFromServer() {
   http.end();
 }
 
-bool reportOtaCheckin(bool ok, const char* version) {
+enum OtaErrorCode {
+  OTA_ERR_NONE = 0,
+  OTA_ERR_WIFI,
+  OTA_ERR_HTTP,
+  OTA_ERR_SIZE_MISMATCH,
+  OTA_ERR_NO_SPACE,
+  OTA_ERR_TIMEOUT,
+  OTA_ERR_WRITE_INCOMPLETE,
+  OTA_ERR_FINALIZE,
+};
+
+struct OtaResult {
+  bool ok = false;
+  OtaErrorCode errorCode = OTA_ERR_NONE;
+  int httpCode = 0;
+  size_t written = 0;
+  size_t total = 0;
+  String errorDetail;
+};
+
+bool reportOtaCheckin(bool ok, const char* version, const char* errorDetail = "") {
   if (WiFi.status() != WL_CONNECTED) return false;
   HTTPClient http;
   http.setTimeout(4000);
   http.begin(OTA_CHECKIN_URL);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Key", DEVICE_KEY_VALUE);
-  StaticJsonDocument<256> doc;
+  StaticJsonDocument<384> doc;
   doc["deviceId"] = DEVICE_ID;
   doc["version"] = version;
   doc["ok"] = ok;
+  if (errorDetail != nullptr && errorDetail[0] != '\0') {
+    doc["error"] = errorDetail;
+  }
   String payload;
   serializeJson(doc, payload);
   int httpCode = http.POST(payload);
@@ -288,32 +349,57 @@ bool reportOtaCheckin(bool ok, const char* version) {
   return httpCode > 0 && httpCode < 400;
 }
 
-bool performOta(const String& url, size_t expectedSize) {
-  if (WiFi.status() != WL_CONNECTED) return false;
+OtaResult performOta(const String& url, size_t expectedSize, const String& version) {
+  OtaResult res;
+  res.total = expectedSize;
+
+  if (WiFi.status() != WL_CONNECTED) {
+    res.errorCode = OTA_ERR_WIFI;
+    res.errorDetail = "Mat ket noi WiFi";
+    Serial.println("OTA: mat ket noi WiFi, huy.");
+    return res;
+  }
+
   HTTPClient http;
   http.setTimeout(15000);
   http.begin(url);
   int httpCode = http.GET();
+  res.httpCode = httpCode;
   if (httpCode != 200) {
+    res.errorCode = OTA_ERR_HTTP;
+    res.errorDetail = "Loi tai file, HTTP " + String(httpCode);
     Serial.printf("OTA: khong tai duoc file, HTTP %d\n", httpCode);
     http.end();
-    return false;
+    return res;
   }
+
   int contentLength = http.getSize();
+  res.total = contentLength > 0 ? (size_t)contentLength : expectedSize;
   if (contentLength <= 0 || (expectedSize > 0 && (size_t)contentLength != expectedSize)) {
+    res.errorCode = OTA_ERR_SIZE_MISMATCH;
+    res.errorDetail = "Kich thuoc file khong khop";
     Serial.println("OTA: kich thuoc file khong khop, huy.");
     http.end();
-    return false;
+    return res;
   }
+
   if (!Update.begin(contentLength)) {
+    res.errorCode = OTA_ERR_NO_SPACE;
+    res.errorDetail = "Khong du bo nho flash";
     Serial.printf("OTA: khong du bo nho flash cho update (%d bytes)\n", contentLength);
     http.end();
-    return false;
+    return res;
   }
+
+  lcdPrintPadded(0, 0, ("Cap nhat " + version).c_str());
+
   WiFiClient* stream = http.getStreamPtr();
   uint8_t buf[1024];
   size_t written = 0;
   unsigned long lastDataMs = millis();
+  unsigned long lastLcdMs = 0;
+  int lastShownPercent = -1;
+
   while (http.connected() && written < (size_t)contentLength) {
     esp_task_wdt_reset();
     size_t avail = stream->available();
@@ -323,9 +409,23 @@ bool performOta(const String& url, size_t expectedSize) {
         Update.write(buf, n);
         written += n;
         lastDataMs = millis();
+
+        int percent = (int)((written * 100UL) / (unsigned long)contentLength);
+        unsigned long now = millis();
+        if (percent != lastShownPercent || now - lastLcdMs >= 400) {
+          lastShownPercent = percent;
+          lastLcdMs = now;
+          char line[17];
+          snprintf(line, sizeof(line), "%3d%% %lu/%luK", percent,
+                   (unsigned long)(written / 1024UL),
+                   (unsigned long)((size_t)contentLength / 1024UL));
+          lcdPrintPadded(0, 1, line);
+        }
       }
     } else {
       if (millis() - lastDataMs > 10000) {
+        res.errorCode = OTA_ERR_TIMEOUT;
+        res.errorDetail = "Qua thoi gian cho du lieu";
         Serial.println("OTA: qua thoi gian cho du lieu, huy.");
         break;
       }
@@ -333,17 +433,46 @@ bool performOta(const String& url, size_t expectedSize) {
     }
   }
   http.end();
+  res.written = written;
+
+  if (res.errorCode != OTA_ERR_NONE) {
+    Update.abort();
+    return res;
+  }
+
   if (written != (size_t)contentLength) {
+    res.errorCode = OTA_ERR_WRITE_INCOMPLETE;
+    res.errorDetail = "Chi ghi duoc " + String((unsigned long)written) + "/" +
+                       String((unsigned long)contentLength) + " bytes";
     Serial.printf("OTA: chi ghi duoc %d/%d bytes, huy.\n", (int)written, contentLength);
     Update.abort();
-    return false;
+    return res;
   }
+
   if (!Update.end(true)) {
+    res.errorCode = OTA_ERR_FINALIZE;
+    res.errorDetail = String("Loi finalize: ") + Update.errorString();
     Serial.printf("OTA: loi finalize - %s\n", Update.errorString());
-    return false;
+    return res;
   }
+
+  res.ok = true;
   Serial.println("OTA: flash thanh cong, khoi dong lai...");
-  return true;
+  return res;
+}
+
+int compareVersions(const String& a, const String& b) {
+  int ai = 0, bi = 0;
+  int alen = a.length(), blen = b.length();
+  while (ai < alen || bi < blen) {
+    int av = 0, bv = 0;
+    while (ai < alen && a[ai] != '.') { av = av * 10 + (a[ai] - '0'); ai++; }
+    while (bi < blen && b[bi] != '.') { bv = bv * 10 + (b[bi] - '0'); bi++; }
+    if (av != bv) return (av > bv) ? 1 : -1;
+    if (ai < alen && a[ai] == '.') ai++;
+    if (bi < blen && b[bi] == '.') bi++;
+  }
+  return 0;
 }
 
 void checkForOta() {
@@ -365,18 +494,27 @@ void checkForOta() {
   String remoteVersion = doc["version"].as<String>();
   String fwUrl = doc["url"].as<String>();
   size_t remoteSize = doc["size"].as<size_t>();
-  if (remoteVersion == FIRMWARE_VERSION) return;
+  int cmp = compareVersions(remoteVersion, FIRMWARE_VERSION);
+  if (cmp == 0) return;
+  if (cmp < 0) {
+
+    Serial.printf("OTA: bo qua vi ban server %s thap hon ban dang chay %s\n",
+                  remoteVersion.c_str(), FIRMWARE_VERSION);
+    return;
+  }
   if (otaLastFailedVersion == remoteVersion && otaFailCount >= OTA_MAX_FAIL) {
     return;
   }
   Serial.printf("OTA: phat hien ban moi %s (dang chay %s), bat dau tai...\n",
                 remoteVersion.c_str(), FIRMWARE_VERSION);
   otaInProgress = true;
-  lcdPrintPadded(0, 0, "Dang cap nhat...");
-  lcdPrintPadded(0, 1, "Vui long doi    ");
+  lcdPrintPadded(0, 0, ("Cap nhat " + remoteVersion).c_str());
+  lcdPrintPadded(0, 1, "Dang ket noi... ");
   buzzerStop();
-  bool ok = performOta(fwUrl, remoteSize);
-  if (ok) {
+  OtaResult result = performOta(fwUrl, remoteSize, remoteVersion);
+  if (result.ok) {
+    lcdPrintPadded(0, 0, "Tai xong 100%   ");
+    lcdPrintPadded(0, 1, "Dang khoi dong..");
     prefs.begin("otaboot", false);
     prefs.putBool("pending", true);
     prefs.putString("pendingVer", remoteVersion);
@@ -386,20 +524,28 @@ void checkForOta() {
     ESP.restart();
   } else {
     otaInProgress = false;
-    reportOtaCheckin(false, remoteVersion.c_str());
+    reportOtaCheckin(false, remoteVersion.c_str(), result.errorDetail.c_str());
     if (otaLastFailedVersion == remoteVersion) {
       otaFailCount++;
     } else {
       otaLastFailedVersion = remoteVersion;
       otaFailCount = 1;
     }
-    lcdPrintPadded(0, 0, "Cap nhat that bai");
+    Serial.printf("OTA: that bai - %s (da tai %lu/%lu bytes)\n",
+                  result.errorDetail.c_str(), (unsigned long)result.written,
+                  (unsigned long)result.total);
+
+    lcdPrintPadded(0, 0, "Loi cap nhat!   ");
+    lcdPrintPadded(0, 1, result.errorDetail.c_str());
+    delay(2500);
     if (otaFailCount >= OTA_MAX_FAIL) {
-      lcdPrintPadded(0, 1, "Da tam dung OTA ");
+      lcdPrintPadded(0, 0, "Da tam dung OTA ");
+      lcdPrintPadded(0, 1, "Thu lai sau 10ph");
       Serial.printf("OTA: that bai %d lan voi ban %s, tam dung ~10 phut.\n",
                     otaFailCount, remoteVersion.c_str());
       lastOtaCheck = millis() + OTA_BACKOFF_MS - OTA_CHECK_INTERVAL_MS;
     } else {
+      lcdPrintPadded(0, 0, "Cap nhat that bai");
       lcdPrintPadded(0, 1, "Van chay ban cu ");
     }
     delay(2000);
@@ -510,6 +656,8 @@ void sendLogToD1(int distance, const char* level) {
   bool changedEnough = abs(distance - lastLoggedDistance) >= LOG_CHANGE_THRESHOLD;
   bool levelChanged = lastLoggedLevel != level;
   bool isDetecting = strcmp(level, "safe") != 0;
+  // Nước dâng sâu hơn 5cm so với ngưỡng phát hiện (DETECT_THRESHOLD) thì coi là "gửi nhiều".
+  bool isDeepDetect = isDetecting && (float)distance <= (DETECT_THRESHOLD - DEEP_DETECT_MARGIN_CM);
   bool shouldSend = false;
   if (changedEnough || levelChanged) {
     lastChangeTime = now;
@@ -517,7 +665,14 @@ void sendLogToD1(int distance, const char* level) {
   } else {
     bool activelyChanging = (now - lastChangeTime) < ACTIVE_CHANGE_WINDOW_MS;
     if (!activelyChanging) {
-      unsigned long heartbeatInterval = isDetecting ? HEARTBEAT_DETECT_STABLE_MS : HEARTBEAT_SAFE_MS;
+      unsigned long heartbeatInterval;
+      if (!isDetecting) {
+        heartbeatInterval = HEARTBEAT_SAFE_MS;            // Khong co nuoc: 30 phut/lan
+      } else if (isDeepDetect) {
+        heartbeatInterval = HEARTBEAT_DEEP_DETECT_MS;      // Nuoc dang sau hon 5cm so voi muc phat hien: gui nhieu (1 phut/lan)
+      } else {
+        heartbeatInterval = HEARTBEAT_LIGHT_DETECT_MS;      // Moi phat hien nuoc, chua vuot 5cm: 15 phut/lan
+      }
       if (now - lastLogTime >= heartbeatInterval) shouldSend = true;
     }
   }
@@ -525,20 +680,22 @@ void sendLogToD1(int distance, const char* level) {
   lastLoggedDistance = distance;
   lastLoggedLevel = level;
   lastLogTime = now;
-  if (xSemaphoreTake(netMutex, pdMS_TO_TICKS(200)) != pdTRUE) return; 
+  if (xSemaphoreTake(netMutex, pdMS_TO_TICKS(200)) != pdTRUE) return;
   queuePendingLog(distance, currentRateCmPerMin, level);
   xSemaphoreGive(netMutex);
 }
 
 void publishMqttTelemetry(int distance, int stableDist, float rate, const char* level) {
-  if (xSemaphoreTake(netMutex, pdMS_TO_TICKS(200)) != pdTRUE) return; 
+  if (xSemaphoreTake(netMutex, pdMS_TO_TICKS(200)) != pdTRUE) return;
   if (mqttClient.connected()) {
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<384> doc;
     doc["distance"] = distance;
     doc["stableDistance"] = stableDist;
     doc["rate"] = serialized(String(rate, 2));
     doc["level"] = level;
     if (currentEta >= 0) doc["eta"] = serialized(String(currentEta, 1));
+    doc["sensorHeight"] = serialized(String(SENSOR_HEIGHT_CM, 1));
+    if (currentWaterLevel >= 0) doc["waterLevel"] = serialized(String(currentWaterLevel, 1));
     doc["timestamp"] = millis();
     char buf[512];
     size_t len = serializeJson(doc, buf);
@@ -553,40 +710,64 @@ void publishMqttTelemetry(int distance, int stableDist, float rate, const char* 
 void handleMqttLoop() {
   if (WiFi.status() != WL_CONNECTED) return;
   unsigned long now = millis();
+
   xSemaphoreTake(netMutex, portMAX_DELAY);
-  if (!mqttClient.connected()) {
+  bool connected = mqttClient.connected();
+  bool shouldRetry = false;
+  if (!connected) {
     if (wasMqttConnected) {
       Serial.printf("MQTT: Mat ket noi! rc=%d\n", mqttClient.state());
       wasMqttConnected = false;
     }
     if (now - lastMqttRetry >= 5000) {
       lastMqttRetry = now;
+      shouldRetry = true;
+    }
+  }
+  xSemaphoreGive(netMutex);
+
+  if (!connected) {
+    if (shouldRetry) {
+
+      tlsClient.stop();
       tlsClient.setInsecure();
       tlsClient.setTimeout(3000);
+      mqttClient.setSocketTimeout(5);
+
       Serial.println("MQTT: Dang thu ket noi...");
       unsigned long connStart = millis();
+
       bool connOk = mqttClient.connect(DEVICE_ID, MQTT_USER, MQTT_PASS, MQTT_TOPIC_LWT, 1, true, "offline");
       Serial.printf("MQTT: connect() mat %lu ms\n", millis() - connStart);
+
+      xSemaphoreTake(netMutex, portMAX_DELAY);
       if (connOk) {
         Serial.println("MQTT: Da ket noi HiveMQ Cloud");
         mqttClient.publish(MQTT_TOPIC_LWT, "online", true);
         wasMqttConnected = true;
       } else {
         Serial.printf("MQTT: Ket noi that bai, rc=%d\n", mqttClient.state());
+        tlsClient.stop();
       }
+      xSemaphoreGive(netMutex);
     }
   } else {
+    xSemaphoreTake(netMutex, portMAX_DELAY);
     mqttClient.loop();
+    xSemaphoreGive(netMutex);
   }
-  xSemaphoreGive(netMutex);
 }
 
 void updateOutputs(int distance, float etaMinutes) {
   char line0[17];
   snprintf(line0, sizeof(line0), "Muc nuoc:%4dcm", distance);
   lcdPrintPadded(0, 0, line0);
-  
-  if (distance > 0 && distance <= DANGER_THRESHOLD) {
+
+  // Dung chung 1 nguon xac dinh muc (levelFromDistance) de den LED, coi, MQTT va log
+  // luon dong bo voi nhau va voi nguong da cau hinh o setting.html.
+  const char* level = levelFromDistance(distance);
+
+  if (strcmp(level, "danger") == 0) {
     lcdPrintPadded(0, 1, "NGUY HIEM: DAY! ");
     digitalWrite(LED_RED, HIGH);
     digitalWrite(LED_YELLOW, LOW);
@@ -594,7 +775,7 @@ void updateOutputs(int distance, float etaMinutes) {
     buzzerAlert(1000);
     triggerAlert(distance, "danger");
   }
-  else if (distance > DANGER_THRESHOLD && distance <= WARN_THRESHOLD) {
+  else if (strcmp(level, "warn") == 0) {
     lcdPrintPadded(0, 1, "Muc trung binh  ");
     digitalWrite(LED_RED, LOW);
     digitalWrite(LED_YELLOW, HIGH);
@@ -602,7 +783,7 @@ void updateOutputs(int distance, float etaMinutes) {
     buzzerStop();
     triggerAlert(distance, "warn");
   }
-  else if (distance > WARN_THRESHOLD && distance <= DETECT_THRESHOLD) {
+  else if (strcmp(level, "detect") == 0) {
     lcdPrintPadded(0, 1, "Phat hien nuoc  ");
     digitalWrite(LED_RED, LOW);
     digitalWrite(LED_YELLOW, HIGH);
@@ -610,7 +791,7 @@ void updateOutputs(int distance, float etaMinutes) {
     buzzerStop();
     triggerAlert(distance, "detect");
   }
-  else if (distance > DETECT_THRESHOLD) {
+  else if (strcmp(level, "safe") == 0) {
     lcdPrintPadded(0, 1, "Muc an toan     ");
     digitalWrite(LED_RED, LOW);
     digitalWrite(LED_YELLOW, LOW);
@@ -904,12 +1085,15 @@ void addCorsHeaders() {
 
 void handleData() {
   addCorsHeaders();
-  StaticJsonDocument<256> doc;
+  StaticJsonDocument<384> doc;
   doc["distance"] = currentDistance;
   doc["stableDistance"] = currentFilteredDistance;
   doc["rate"] = serialized(String(currentRateCmPerMin, 2));
   if (currentEta >= 0) doc["eta"] = serialized(String(currentEta, 1));
   else doc["eta"] = nullptr;
+  doc["sensorHeight"] = serialized(String(SENSOR_HEIGHT_CM, 1));
+  if (currentWaterLevel >= 0) doc["waterLevel"] = serialized(String(currentWaterLevel, 1));
+  else doc["waterLevel"] = nullptr;
   doc["pendingLogs"] = pendingCount;
   doc["timestamp"] = lastUpdateMillis;
   String json;
@@ -1004,6 +1188,34 @@ void handleWifiConfig() {
   ESP.restart();
 }
 
+void handleSensorConfigGet() {
+  addCorsHeaders();
+  StaticJsonDocument<128> doc;
+  doc["sensorHeight"] = serialized(String(SENSOR_HEIGHT_CM, 1));
+  String json;
+  serializeJson(doc, json);
+  server.send(200, "application/json", json);
+}
+
+void handleSensorConfigSet() {
+  addCorsHeaders();
+  if (server.method() != HTTP_POST) { server.send(405, "text/plain", "Method not allowed"); return; }
+  if (!checkDeviceKey()) return;
+  StaticJsonDocument<128> doc;
+  if (deserializeJson(doc, server.arg("plain")) || doc["sensorHeight"].isNull()) {
+    server.send(400, "application/json", "{\"error\":\"bad json\"}");
+    return;
+  }
+  float h = doc["sensorHeight"].as<float>();
+  if (!(h > 0 && h <= MAX_DISTANCE)) {
+    server.send(400, "application/json", "{\"error\":\"gia tri khong hop le\"}");
+    return;
+  }
+  SENSOR_HEIGHT_CM = h;
+  saveSensorHeight(h);
+  server.send(200, "application/json", "{\"ok\":true}");
+}
+
 void setupWatchdog() {
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
   esp_task_wdt_config_t twdtConfig = {
@@ -1084,8 +1296,15 @@ void handleBootRollbackCheck() {
   }
 }
 
+unsigned long lastHeapLog = 0;
+const unsigned long HEAP_LOG_INTERVAL_MS = 60UL * 1000UL;
+
 void networkTask(void* pvParameters) {
   for (;;) {
+    if (millis() - lastHeapLog >= HEAP_LOG_INTERVAL_MS) {
+      lastHeapLog = millis();
+      Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
+    }
     handleMqttLoop();
     if (!otaInProgress) {
       if (millis() - lastSettingsFetch >= SETTINGS_FETCH_INTERVAL_MS) {
@@ -1140,6 +1359,9 @@ void setup() {
   bootStartMs = millis();
   handleBootRollbackCheck();
 
+  SENSOR_HEIGHT_CM = getSavedSensorHeight();
+  Serial.printf("Do cao cam bien da luu: %.1f cm\n", SENSOR_HEIGHT_CM);
+
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP("ESP32_WaterLevel", AP_PASSWORD, 1, 0, 4);
   String ssid = getSavedSSID();
@@ -1189,7 +1411,7 @@ void setup() {
   delay(2500);
 
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-  mqttClient.setBufferSize(512); 
+  mqttClient.setBufferSize(512);
   mqttClient.setKeepAlive(30);
   tlsClient.setInsecure();
   tlsClient.setTimeout(5000);
@@ -1200,11 +1422,13 @@ void setup() {
   server.on("/history-filtered", handleHistoryFiltered);
   server.on("/wifi-status", handleWifiStatus);
   server.on("/wifi-config", HTTP_POST, handleWifiConfig);
+  server.on("/sensor-config", HTTP_GET, handleSensorConfigGet);
+  server.on("/sensor-config", HTTP_POST, handleSensorConfigSet);
   server.begin();
   Serial.println("Web server da khoi dong.");
 
   netMutex = xSemaphoreCreateMutex();
-  xTaskCreatePinnedToCore(networkTask, "networkTask", 8192, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(networkTask, "networkTask", 12288, NULL, 1, NULL, 0);
   lastRead = millis();
 }
 
@@ -1216,6 +1440,7 @@ void loop() {
     int raw = measureDistanceRaw();
     if (raw < 0) {
       currentDistance = -1;
+      currentWaterLevel = -1;
       showSensorError();
       sendLogToD1(-1, "error");
       publishMqttTelemetry(-1, -1, 0, "error");
@@ -1225,8 +1450,9 @@ void loop() {
       currentFilteredDistance = pushAndSmoothStable(raw);
       updateRate(currentDistance);
       currentEta = estimateMinutesToDanger(currentDistance);
+      currentWaterLevel = computeWaterLevel(currentFilteredDistance);
       lastUpdateMillis = millis();
-      updateOutputs(currentDistance, currentEta);
+      updateOutputs(currentFilteredDistance, currentEta);
       pushHistory(currentDistance);
       pushFilteredHistory(currentFilteredDistance);
       sendLogToD1(currentFilteredDistance, levelFromDistance(currentFilteredDistance));

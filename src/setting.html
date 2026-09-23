@@ -510,7 +510,7 @@
   .ota-btn-activate { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
   .ota-btn-rollback { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
   .ota-btn-delete { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
-  
+
   .ota-modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
   .ota-modal-body { display: grid; grid-template-columns: 280px 1fr; gap: 16px; flex: 1 1 auto; min-height: 0; overflow: hidden; }
   .ota-upload-pane { display: flex; flex-direction: column; gap: 10px; background: color-mix(in srgb, var(--card-inner) 60%, transparent); border: 1px solid var(--border); border-radius: 12px; padding: 14px; overflow-y: auto; overscroll-behavior: contain; }
@@ -539,6 +539,7 @@
     animation: otaCheckinPulse 1.1s ease-in-out infinite;
   }
   .ota-checkin-box.done .ota-checkin-dot { background: var(--safe); animation: none; box-shadow: 0 0 8px var(--safe); }
+  .ota-checkin-box.done.error .ota-checkin-dot { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
   @keyframes otaCheckinPulse {
     0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
     70% { box-shadow: 0 0 0 9px transparent; }
@@ -553,7 +554,8 @@
   .wifi-field label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
   .wifi-input { background: var(--card-inner); border: 1px solid var(--border); color: var(--text); font-size: 0.85rem; padding: 10px 14px; border-radius: 10px; width: 100%; outline: none; transition: border-color 0.2s; }
   .wifi-input:focus { border-color: var(--accent); }
-  .wifi-status-box { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; background: var(--card-inner); border: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; }
+  .wifi-status-box { display: flex; align-items: center; gap: 8px; padding: 6px 2px; font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+  .wifi-status-box .dot { flex-shrink: 0; }
 
   @media (max-width: 760px) {
     html, body {
@@ -704,7 +706,7 @@
     <h1>Cài Đặt &amp; Lịch Sử Mực Nước</h1>
     <div class="header-status">
       <div id="connStatus" class="conn-badge">Đang kết nối...</div>
-      
+
       <button id="wifiOpenBtn" class="theme-toggle-btn" aria-label="Cấu hình WiFi" title="Cấu hình WiFi">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
@@ -771,6 +773,15 @@
             <span class="threshold-unit">cm</span>
           </div>
         </div>
+
+        <div class="threshold-row">
+          <label><span class="dot" style="background:var(--muted); box-shadow:0 0 6px var(--muted);"></span>Độ cao cảm biến</label>
+          <div class="threshold-input-wrap">
+            <input type="number" id="sensorHeightInput" class="threshold-input" step="1" min="1">
+            <span class="threshold-unit">cm</span>
+          </div>
+        </div>
+        <div class="threshold-hint" style="margin-top:-6px;">Khoảng cách từ cảm biến đến đáy/mặt đất, dùng để tính mực nước dâng.</div>
 
         <div class="threshold-hint">Hệ thống cập nhật sau khi lưu trong 20s.</div>
         <div id="thresholdStatus" class="threshold-status"></div>
@@ -913,24 +924,40 @@
       <div class="modal-title" style="color:var(--text); display:flex; align-items:center; gap:8px;">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
         Cấu Hình WiFi Thiết Bị
+        <button id="wifiHelpBtn" type="button" aria-label="Giải thích" title="Dùng khi WiFi cũ bị đổi mật khẩu hoặc đổi router. Nhập mạng mới ở đây và Lưu để ESP32 chuyển sang dùng mạng đó." style="width:18px; height:18px; border-radius:50%; border:1px solid var(--border); background:var(--card); color:var(--muted); font-size:0.68rem; font-weight:700; line-height:1; display:inline-flex; align-items:center; justify-content:center; cursor:help; flex-shrink:0; padding:0;">?</button>
       </div>
       <button id="wifiCloseBtn" class="btn btn-ghost" style="padding: 5px; font-size: 1.2rem; line-height: 1;">✕</button>
     </div>
 
-    <div id="wifiStatusBadge" class="wifi-status-box">Nhập IP thiết bị để kiểm tra...</div>
-
-    <div class="wifi-field">
-      <label>Địa chỉ IP thiết bị (LAN)</label>
-      <input type="text" id="wifiDeviceIpEl" class="wifi-input" placeholder="vd: 192.168.1.25">
+    <div id="wifiHelpNote" style="display:none; font-size: 0.75rem; color: var(--muted); line-height: 1.6; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;">
+      Khi WiFi cũ bị đổi mật khẩu hoặc đổi router, ESP32 sẽ không tự vào mạng được nữa. Nhập tên mạng mới và mật khẩu mới ở form bên dưới rồi bấm Lưu — thiết bị sẽ khởi động lại và chuyển sang dùng mạng đó.
     </div>
 
     <div class="wifi-field">
-      <label>Tên WiFi (SSID)</label>
+      <label>Trạng thái</label>
+      <div id="wifiStatusBadge" class="wifi-status-box">Nhập IP thiết bị để kiểm tra...</div>
+    </div>
+
+    <div class="wifi-field">
+      <label>Địa chỉ IP thiết bị hiện tại</label>
+      <input type="text" id="wifiDeviceIpEl" class="wifi-input" placeholder="vd: 192.168.1.25">
+      <div style="display:flex; align-items:center; gap:6px; margin-top: 6px;">
+        <button id="wifiUseApBtn" type="button" class="btn btn-ghost" style="font-size: 0.7rem; padding: 4px 10px;">Dùng IP dự phòng (192.168.4.1)</button>
+      </div>
+      <ol style="font-size: 0.7rem; color: var(--muted); margin: 8px 0 0; padding-left: 16px; line-height: 1.7;">
+        <li>Không vào được mạng nhà? ESP32 sẽ tự phát WiFi tên <strong>ESP32_WaterLevel</strong>.</li>
+        <li>Kết nối điện thoại/laptop vào WiFi đó trước.</li>
+        <li>Bấm nút "Dùng IP dự phòng" ở trên, rồi điền mạng mới bên dưới.</li>
+      </ol>
+    </div>
+
+    <div class="wifi-field">
+      <label>Tên WiFi mới(SSID) </label>
       <input type="text" id="wifiSsidManualInput" class="wifi-input" placeholder="Tên WiFi">
     </div>
 
     <div class="wifi-field">
-      <label>Mật khẩu WiFi</label>
+      <label>Mật khẩu WiFi mới</label>
       <input type="password" id="wifiPassInput" class="wifi-input" placeholder="Mật khẩu">
     </div>
 
@@ -965,7 +992,7 @@
 
         <input type="text" id="otaVersion" class="ota-field" placeholder="Phiên bản">
         <textarea id="otaNote" class="ota-field" placeholder="Ghi chú cập nhật..." rows="3"></textarea>
-        
+
         <div class="ota-progress" id="otaProgress"><div class="ota-progress-fill" id="otaProgressFill"></div></div>
         <button id="otaUploadBtn" class="btn btn-excel btn-full" disabled>Tải lên</button>
       </div>
@@ -1028,6 +1055,7 @@
   const thresholdDangerEl = document.getElementById("thresholdDanger");
   const thresholdWarnEl = document.getElementById("thresholdWarn");
   const thresholdDetectEl = document.getElementById("thresholdDetect");
+  const sensorHeightInputEl = document.getElementById("sensorHeightInput");
   const thresholdSaveBtnEl = document.getElementById("thresholdSaveBtn");
   const thresholdStatusEl = document.getElementById("thresholdStatus");
 
@@ -1044,8 +1072,6 @@
   workerUrlInputEl.value = workerBaseUrl;
   deviceKeyInputEl.value = deviceKey;
 
-  // deviceId: đọc từ localStorage, mặc định HCSR04 (id thiết bị hiện tại).
-  // Ghi đè bất kỳ giá trị cũ nào trình duyệt có thể tự autofill vào ô này.
   const DEFAULT_DEVICE_ID = "HCSR04";
   let currentDeviceId = localStorage.getItem("deviceId") || DEFAULT_DEVICE_ID;
   deviceFilterEl.value = currentDeviceId;
@@ -1054,17 +1080,18 @@
     currentDeviceId = deviceFilterEl.value.trim() || DEFAULT_DEVICE_ID;
     localStorage.setItem("deviceId", currentDeviceId);
   }
-  // "input" bắt lúc gõ tay; "change"/"blur" bắt các trường hợp trình duyệt
-  // tự autofill mà không bắn sự kiện input (khiến DOM lệch khỏi biến này).
+
   deviceFilterEl.addEventListener("input", syncDeviceIdFromField);
   deviceFilterEl.addEventListener("change", syncDeviceIdFromField);
   deviceFilterEl.addEventListener("blur", syncDeviceIdFromField);
 
-  const DEFAULT_THRESHOLDS = { danger: 15, warn: 40, detect: 180 };
+  const DEFAULT_THRESHOLDS = { danger: 15, warn: 40, detect: 180, sensorHeight: 200 };
   function loadThresholds() {
     try {
       const raw = JSON.parse(localStorage.getItem("alertThresholds"));
-      if (raw && typeof raw.danger === "number" && typeof raw.warn === "number" && typeof raw.detect === "number") return raw;
+      if (raw && typeof raw.danger === "number" && typeof raw.warn === "number" && typeof raw.detect === "number") {
+        return { sensorHeight: DEFAULT_THRESHOLDS.sensorHeight, ...raw };
+      }
     } catch (e) {}
     return { ...DEFAULT_THRESHOLDS };
   }
@@ -1072,11 +1099,39 @@
   thresholdDangerEl.value = thresholds.danger;
   thresholdWarnEl.value = thresholds.warn;
   thresholdDetectEl.value = thresholds.detect;
+  sensorHeightInputEl.value = thresholds.sensorHeight;
+
+  // Dong bo tu server khi mo trang, de nhieu trinh duyet/thiet bi luon thay cung 1 cau hinh.
+  async function syncSettingsFromServer() {
+    if (!workerBaseUrl) return;
+    try {
+      const res = await fetch(workerBaseUrl + "/get-settings?deviceId=" + encodeURIComponent(currentDeviceId || "HCSR04"), { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (typeof data.danger === "number" && typeof data.warn === "number" && typeof data.detect === "number") {
+        thresholds = {
+          danger: data.danger,
+          warn: data.warn,
+          detect: data.detect,
+          sensorHeight: (typeof data.sensorHeight === "number") ? data.sensorHeight : thresholds.sensorHeight
+        };
+        localStorage.setItem("alertThresholds", JSON.stringify(thresholds));
+        thresholdDangerEl.value = thresholds.danger;
+        thresholdWarnEl.value = thresholds.warn;
+        thresholdDetectEl.value = thresholds.detect;
+        sensorHeightInputEl.value = thresholds.sensorHeight;
+      }
+    } catch (e) {
+      // Khong ket noi duoc server, giu nguyen gia tri cuc bo hien co.
+    }
+  }
+  syncSettingsFromServer();
 
   thresholdSaveBtnEl.addEventListener("click", async () => {
     const danger = parseFloat(thresholdDangerEl.value);
     const warn = parseFloat(thresholdWarnEl.value);
     const detect = parseFloat(thresholdDetectEl.value);
+    const sensorHeight = parseFloat(sensorHeightInputEl.value);
 
     if (![danger, warn, detect].every(v => Number.isFinite(v) && v >= 0)) {
       thresholdStatusEl.textContent = "Giá trị ngưỡng không hợp lệ.";
@@ -1088,8 +1143,13 @@
       thresholdStatusEl.style.color = "var(--danger)";
       return;
     }
+    if (!Number.isFinite(sensorHeight) || sensorHeight <= 0) {
+      thresholdStatusEl.textContent = "Độ cao cảm biến không hợp lệ.";
+      thresholdStatusEl.style.color = "var(--danger)";
+      return;
+    }
 
-    thresholds = { danger, warn, detect };
+    thresholds = { danger, warn, detect, sensorHeight };
     localStorage.setItem("alertThresholds", JSON.stringify(thresholds));
     thresholdStatusEl.textContent = "Đã lưu ngưỡng cục bộ.";
     thresholdStatusEl.style.color = "var(--safe)";
@@ -1100,10 +1160,10 @@
         const res = await fetch(workerBaseUrl + "/setting-log", {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-Device-Key": deviceKey },
-          body: JSON.stringify({ danger, warn, detect, deviceId: currentDeviceId || "HCSR04" })
+          body: JSON.stringify({ danger, warn, detect, sensorHeight, deviceId: currentDeviceId || "HCSR04" })
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
-        thresholdStatusEl.textContent = "Đã lưu ngưỡng và ghi log lên máy chủ.";
+        thresholdStatusEl.textContent = "Đã lưu ngưỡng, độ cao cảm biến và ghi log lên máy chủ.";
       } catch (e) {
         thresholdStatusEl.textContent = "Đã lưu cục bộ, nhưng ghi log thất bại: " + e.message;
         thresholdStatusEl.style.color = "var(--warn)";
@@ -1332,10 +1392,15 @@
   let otaCheckinTimer = null;
   let otaCheckinDeviceId = null;
   let otaCheckinSinceEpoch = 0;
+  let otaCheckinExpectedVersion = "";
+  let otaCheckinStartedMs = 0;
+  const OTA_CHECKIN_TIMEOUT_MS = 45000;
 
   function otaCheckinStart(deviceId, version) {
     otaCheckinDeviceId = deviceId;
+    otaCheckinExpectedVersion = version || "";
     otaCheckinSinceEpoch = Math.floor(Date.now() / 1000) - 2;
+    otaCheckinStartedMs = Date.now();
 
     clearInterval(otaCheckinTimer);
     otaCheckinBoxEl.style.display = "flex";
@@ -1351,25 +1416,60 @@
 
   async function otaCheckinPoll() {
     if (!workerBaseUrl || !otaCheckinDeviceId) return;
+
+    if (Date.now() - otaCheckinStartedMs > OTA_CHECKIN_TIMEOUT_MS) {
+      otaCheckinTimeout();
+      return;
+    }
+
     try {
-      const res = await fetch(workerBaseUrl + "/history-data", { cache: "no-store", mode: "cors" });
+      const res = await fetch(
+        workerBaseUrl + "/ota/checkin-status?deviceId=" + encodeURIComponent(otaCheckinDeviceId),
+        { cache: "no-store", mode: "cors" }
+      );
       if (!res.ok) return;
-      const rows = await res.json();
-      const hit = (Array.isArray(rows) ? rows : [])
-        .filter(r => (r.device_id || "") === otaCheckinDeviceId && r.epoch > otaCheckinSinceEpoch)
-        .sort((a, b) => b.epoch - a.epoch)[0];
-      if (hit) otaCheckinFinish(hit);
+      const data = await res.json();
+      if (!data || data.status === "none" || data.status === "pending") return;
+
+      if (typeof data.ts === "number" && data.ts < otaCheckinStartedMs - 2000) return;
+
+      if (data.status === "ok") {
+        if (otaCheckinExpectedVersion && data.version && data.version !== otaCheckinExpectedVersion) {
+          return;
+        }
+        otaCheckinFinish(true, data);
+      } else if (data.status === "failed") {
+        otaCheckinFinish(false, data);
+      }
     } catch (e) {
     }
   }
 
-  function otaCheckinFinish(row) {
+  function otaCheckinTimeout() {
+    clearInterval(otaCheckinTimer);
+    otaCheckinTimer = null;
+    otaCheckinDotEl.classList.remove("pulse");
+    otaCheckinBoxEl.classList.add("done", "error");
+    otaCheckinTitleEl.textContent = "Không nhận được phản hồi từ chip";
+    otaCheckinSubEl.textContent = "Chip có thể mất kết nối WiFi giữa chừng hoặc chưa checkin kịp. Kiểm tra lại thiết bị.";
+    otaCheckinConfirmBtnEl.style.display = "inline-flex";
+  }
+
+  function otaCheckinFinish(ok, data) {
     clearInterval(otaCheckinTimer);
     otaCheckinTimer = null;
     otaCheckinDotEl.classList.remove("pulse");
     otaCheckinBoxEl.classList.add("done");
-    otaCheckinTitleEl.textContent = "Chip đã checkin — hoàn thành";
-    otaCheckinSubEl.textContent = `Tín hiệu mới nhận lúc ${formatTs(row.epoch)}`;
+    otaCheckinBoxEl.classList.toggle("error", !ok);
+    if (ok) {
+      otaCheckinTitleEl.textContent = `Chip đã lên bản ${data.version} thành công`;
+      otaCheckinSubEl.textContent = `Xác nhận lúc ${new Date(data.ts).toLocaleTimeString("vi-VN")}`;
+    } else {
+      otaCheckinTitleEl.textContent = `Cập nhật thất bại (bản ${data.version || otaCheckinExpectedVersion})`;
+      otaCheckinSubEl.textContent = data.error
+        ? `Lỗi: ${data.error}`
+        : `Chip báo lỗi lúc ${new Date(data.ts).toLocaleTimeString("vi-VN")}`;
+    }
     otaCheckinConfirmBtnEl.style.display = "inline-flex";
   }
 
@@ -1377,7 +1477,7 @@
     clearInterval(otaCheckinTimer);
     otaCheckinTimer = null;
     otaCheckinBoxEl.style.display = "none";
-    otaCheckinBoxEl.classList.remove("done");
+    otaCheckinBoxEl.classList.remove("done", "error");
   });
 
   otaOpenBtnEl.addEventListener("click", () => {
@@ -1386,7 +1486,7 @@
       return;
     }
     otaModalEl.classList.add("open");
-    deviceFilterEl.value = currentDeviceId; // ép lại UI về đúng giá trị đã lưu, chống autofill ghi đè ngầm
+    deviceFilterEl.value = currentDeviceId;
     otaRefreshList();
   });
   otaCloseBtnEl.addEventListener("click", () => otaModalEl.classList.remove("open"));
@@ -1594,6 +1694,19 @@
   const wifiPassInputEl = document.getElementById("wifiPassInput");
   const wifiSaveBtnEl = document.getElementById("wifiSaveBtn");
   const wifiMsgEl = document.getElementById("wifiMsg");
+  const wifiUseApBtnEl = document.getElementById("wifiUseApBtn");
+  const wifiHelpBtnEl = document.getElementById("wifiHelpBtn");
+  const wifiHelpNoteEl = document.getElementById("wifiHelpNote");
+
+  wifiHelpBtnEl.addEventListener("click", () => {
+    wifiHelpNoteEl.style.display = wifiHelpNoteEl.style.display === "none" ? "block" : "none";
+  });
+
+  wifiUseApBtnEl.addEventListener("click", () => {
+    wifiDeviceIpEl.value = "192.168.4.1";
+    localStorage.setItem("deviceIp", "192.168.4.1");
+    checkWifiStatus();
+  });
 
   wifiDeviceIpEl.value = localStorage.getItem("deviceIp") || "";
   wifiDeviceIpEl.addEventListener("change", () => {
@@ -1645,7 +1758,7 @@
     const base = getDeviceBaseUrl();
     const ssid = wifiSsidManualInputEl.value.trim();
     const pass = wifiPassInputEl.value;
-    
+
     if (!base) {
       wifiMsgEl.textContent = "Cần nhập IP thiết bị";
       wifiMsgEl.style.color = "var(--warn)";
@@ -1661,10 +1774,10 @@
       wifiMsgEl.style.color = "var(--warn)";
       return;
     }
-    
+
     wifiSaveBtnEl.disabled = true;
     wifiSaveBtnEl.textContent = "Đang lưu cấu hình...";
-    
+
     try {
       const res = await fetch(base + "/wifi-config", {
         method: "POST",

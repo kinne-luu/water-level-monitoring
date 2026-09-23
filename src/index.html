@@ -166,42 +166,6 @@
     border: 1px solid var(--border);
   }
 
-  .ip-config {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 230px;
-  }
-
-  .ip-config input {
-    background: var(--card-inner);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 0.875rem;
-    padding: 8px 12px;
-    border-radius: 10px;
-    flex: 1;
-    min-width: 120px;
-    min-height: 38px;
-    font-variant-numeric: tabular-nums;
-  }
-  .ip-config input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-  .ip-config button {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 8px 14px;
-    min-height: 38px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: opacity 0.15s ease;
-  }
-  .ip-config button:hover { opacity: 0.85; }
-
   .action-btn {
     display: inline-flex;
     align-items: center;
@@ -657,110 +621,6 @@
   .history-row .h-time { color: var(--muted); min-width: 4.6em; }
   .history-row .h-dist { font-weight: 700; margin-left: auto; font-variant-numeric: tabular-nums; }
 
-  .wifi-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.65);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-    padding: 16px;
-    padding-top: max(16px, env(safe-area-inset-top));
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-  }
-  .wifi-overlay.open { opacity: 1; pointer-events: auto; }
-
-  .wifi-modal {
-    width: 100%;
-    max-width: 420px;
-    max-height: min(90dvh, 640px);
-    overflow-y: auto;
-    background: color-mix(in srgb, var(--card) 96%, transparent);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    box-shadow: 0 24px 60px var(--shadow-xl);
-    padding: clamp(16px, 3vw, 22px);
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    transform: translateY(15px) scale(0.96);
-    transition: transform 0.25s cubic-bezier(0.2,0.8,0.2,1);
-  }
-  .wifi-overlay.open .wifi-modal { transform: translateY(0) scale(1); }
-
-  .wifi-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .wifi-modal-title { font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  .wifi-modal-title svg { width: 20px; height: 20px; color: var(--accent); }
-  .wifi-close {
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-  }
-  .wifi-close:hover { background: var(--card-inner); color: var(--text); }
-
-  .wifi-status-box {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: var(--card-inner);
-    border: 1px solid var(--border);
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
-
-  .wifi-field { display: flex; flex-direction: column; gap: 6px; }
-  .wifi-field label { font-size: 0.8125rem; font-weight: 500; color: var(--muted); }
-  .wifi-input {
-    background: var(--card-inner);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 16px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    width: 100%;
-    outline: none;
-  }
-  .wifi-input:focus { box-shadow: 0 0 0 2px var(--accent); }
-
-  .wifi-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 16px;
-    border-radius: 12px;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    width: 100%;
-    min-height: 44px;
-    transition: opacity 0.2s, transform 0.1s;
-  }
-  .wifi-btn:active { transform: scale(0.98); }
-  .wifi-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .wifi-btn-save { background: var(--accent); color: #fff; }
-  .wifi-msg-line { font-size: 0.8125rem; text-align: center; min-height: 18px; font-weight: 500; }
-
   @media (min-width: 920px) {
     .main-content {
       flex-direction: row;
@@ -798,9 +658,6 @@
       justify-content: space-between;
       width: 100%;
     }
-    .ip-config {
-      width: 100%;
-    }
     .nav-link span { display: none; }
     .nav-link { padding: 8px; }
     .history-panel {
@@ -835,14 +692,6 @@
         <h1>Hệ Thống Giám Sát Mực Nước</h1>
       </div>
       <div class="header-controls">
-        <button id="wifiOpenBtn" class="action-btn" aria-label="Cấu hình WiFi" title="Cấu hình WiFi">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
-            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
-            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
-            <line x1="12" y1="20" x2="12.01" y2="20"></line>
-          </svg>
-        </button>
         <a class="nav-link page-link" href="setting.html" aria-label="Mở cài đặt">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
@@ -860,10 +709,6 @@
           <span class="dot" style="background: var(--muted);"></span>
           <span id="statusText">Đang chờ...</span>
         </div>
-      </div>
-      <div class="ip-config">
-        <input type="text" id="espIpInput" value="192.168.4.1" placeholder="IP ESP32" inputmode="numeric">
-        <button id="espIpSaveBtn">Lưu IP</button>
       </div>
     </div>
   </header>
@@ -981,47 +826,8 @@
   </div>
 </div>
 
-<div id="wifiModal" class="wifi-overlay">
-  <div class="wifi-modal">
-    <div class="wifi-modal-header">
-      <div class="wifi-modal-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
-        Cấu Hình WiFi
-      </div>
-      <button id="wifiCloseBtn" class="wifi-close" aria-label="Đóng">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-    </div>
-    <div id="wifiStatusBadge" class="wifi-status-box">Đang tải...</div>
-    <div class="wifi-field">
-      <label for="wifiDevKeyInput">Device Key</label>
-      <input type="password" id="wifiDevKeyInput" class="wifi-input" placeholder="Yêu cầu để thay đổi WiFi">
-    </div>
-    <div class="wifi-field">
-      <label for="wifiSsidManualInput">Tên WiFi (SSID)</label>
-      <input type="text" id="wifiSsidManualInput" class="wifi-input" placeholder="Tên WiFi">
-    </div>
-    <div class="wifi-field">
-      <label for="wifiPassInput">Mật khẩu WiFi</label>
-      <input type="password" id="wifiPassInput" class="wifi-input" placeholder="Mật khẩu">
-    </div>
-    <div class="wifi-field">
-      <label for="wifiStaticIpInput">IP tĩnh (không bắt buộc)</label>
-      <input type="text" id="wifiStaticIpInput" class="wifi-input" placeholder="Ví dụ: 192.168.1.50">
-    </div>
-    <div class="wifi-field">
-      <label for="wifiGatewayInput">Gateway (không bắt buộc)</label>
-      <input type="text" id="wifiGatewayInput" class="wifi-input" placeholder="Ví dụ: 192.168.1.1">
-    </div>
-    <button id="wifiSaveBtn" class="wifi-btn wifi-btn-save">Lưu & Kết Nối Lại</button>
-    <div id="wifiMsg" class="wifi-msg-line"></div>
-  </div>
-</div>
-
 <script>
-  const MAX_DISTANCE = 200;
-  const DANGER_THRESHOLD = 15;
-  const WARN_THRESHOLD = 40;
+  let MAX_DISTANCE = 200; // Se duoc cap nhat tu sensorHeight ESP32 gui ve qua MQTT
   const MAX_CHART_POINTS = 30;
 
   const distanceValueEl = document.getElementById("distanceValue");
@@ -1041,16 +847,7 @@
   const tankWaveFillEl = document.getElementById("tankWaveFill");
   const tankWavePathEl = document.getElementById("tankWavePath");
   const tankFloodGlowEl = document.getElementById("tankFloodGlow");
-  const espIpInputEl = document.getElementById("espIpInput");
-  const espIpSaveBtnEl = document.getElementById("espIpSaveBtn");
-  const wifiModal = document.getElementById("wifiModal");
-  const wifiOpenBtn = document.getElementById("wifiOpenBtn");
-  const wifiCloseBtn = document.getElementById("wifiCloseBtn");
-  const wifiStatusBadge = document.getElementById("wifiStatusBadge");
-  const wifiPassInput = document.getElementById("wifiPassInput");
-  const wifiSaveBtn = document.getElementById("wifiSaveBtn");
-  const wifiMsg = document.getElementById("wifiMsg");
-  const wifiDevKeyInput = document.getElementById("wifiDevKeyInput");
+
   const realtimeCanvas = document.getElementById('realtimeChart');
   const avgCanvas = document.getElementById('avgChart');
 
@@ -1243,15 +1040,20 @@
     }
   }
 
-  function classify(distance) {
-    if (distance < 0) {
-      return { level: "error", color: "#8e8e93", label: "Cảm biến lỗi", message: "Không đọc được dữ liệu cảm biến." };
-    } else if (distance <= DANGER_THRESHOLD) {
-      return { level: "danger", color: "#ff453a", label: "Nguy hiểm — gần tràn", message: "Mực nước dâng sát cảm biến (dưới 15cm) - Cảnh báo khẩn cấp!" };
-    } else if (distance <= WARN_THRESHOLD) {
-      return { level: "warn", color: "#ff9f0a", label: "Mức trung bình", message: "Mực nước đang ở mức cảnh báo trung bình (15cm - 40cm)." };
-    } else {
-      return { level: "safe", color: "#30d158", label: "An toàn", message: "Mực nước đang ở ngưỡng an toàn (> 40cm)." };
+  // Mau sac va nhan lay theo "level" ma ESP32 da tinh san (dung nguong tu setting.html):
+  // safe = xanh (khong co nuoc); warn/detect = vang (co nuoc); danger = do; error = xam.
+  function classify(level) {
+    switch (level) {
+      case "danger":
+        return { level: "danger", color: "#ff453a", label: "Nguy hiểm", message: "Mực nước nguy hiểm, ưu tiên sơ tán khẩn cấp" };
+      case "warn":
+        return { level: "warn", color: "#ff9f0a", label: "Có nước", message: "Mực nước không an toàn, nhanh chóng sơ tán người và phương tiện nếu có thể" };
+      case "detect":
+        return { level: "detect", color: "#ff9f0a", label: "Có nước", message: "Phát hiện nước trong hầm." };
+      case "safe":
+        return { level: "safe", color: "#30d158", label: "An toàn", message: "Không phát hiện nước." };
+      default:
+        return { level: "error", color: "#8e8e93", label: "Cảm biến lỗi", message: "Không đọc được dữ liệu cảm biến." };
     }
   }
 
@@ -1273,8 +1075,22 @@
   function updateUI(data) {
     const distance = Number(data.distance);
     const rate = data.rate ? parseFloat(data.rate) : 0;
-    const info = classify(distance);
+    const deviceLevel = typeof data.level === "string" ? data.level : (distance < 0 ? "error" : "");
+    const info = classify(deviceLevel);
     const currentTimeStr = new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    if (typeof data.sensorHeight === "number" && data.sensorHeight > 0) {
+      MAX_DISTANCE = data.sensorHeight;
+    }
+
+    // Muc nuoc dang (cm) tinh tu tran cam bien xuong: uu tien gia tri ESP32 da tinh san
+    // (data.waterLevel = sensorHeight - khoang cach), chi tu tinh lai khi thieu du lieu do.
+    const waterLevelCm = (typeof data.waterLevel === "number" && data.waterLevel >= 0)
+      ? data.waterLevel
+      : (distance >= 0 ? Math.max(0, MAX_DISTANCE - distance) : 0);
+    const fillPercent = (MAX_DISTANCE > 0 && distance >= 0)
+      ? Math.max(0, Math.min(100, (waterLevelCm / MAX_DISTANCE) * 100))
+      : 0;
 
     distanceValueEl.textContent = (!isNaN(distance) && distance >= 0) ? distance.toFixed(1) : "--";
     distanceValueEl.style.color = info.color;
@@ -1286,7 +1102,6 @@
     statusTextEl.textContent = info.label;
     statusBadgeEl.querySelector(".dot").style.background = info.color;
 
-    const fillPercent = distance >= 0 ? Math.max(0, Math.min(100, ((MAX_DISTANCE - distance) / MAX_DISTANCE) * 100)) : 0;
     gaugeFillEl.style.width = fillPercent + "%";
     gaugeFillEl.style.background = info.color;
 
@@ -1298,7 +1113,7 @@
     timestampEl.textContent = currentTimeStr;
     updateTrend(rate);
 
-    if (distance > 0 && distance <= DANGER_THRESHOLD) {
+    if (info.level === "danger") {
       etaBannerEl.textContent = "CẢNH BÁO: MỰC NƯỚC ĐÃ CHẠM VÙNG NGUY HIỂM!";
       etaBannerEl.classList.add("show");
     } else {
@@ -1309,22 +1124,23 @@
       const smoothedVal = (data.stableDistance !== undefined && data.stableDistance >= 0)
         ? Number(data.stableDistance)
         : calcMovingAverage(distance);
-      const smoothedInfo = classify(smoothedVal);
-      appendDualPoints(distance, smoothedVal, info.color, smoothedInfo.color);
+      // Dung chung 1 mau (theo level cua ESP32) cho ca 2 duong bieu do de dam bao dong bo.
+      appendDualPoints(distance, smoothedVal, info.color, info.color);
       recordHistory(distance, info, currentTimeStr);
     }
-    updateTank3D(distance, info);
+    updateTank3D(distance, waterLevelCm, fillPercent, info);
   }
 
-  function updateTank3D(distance, info) {
-    const fillPercent = distance >= 0 ? Math.max(0, Math.min(100, ((MAX_DISTANCE - distance) / MAX_DISTANCE) * 100)) : 0;
+  function updateTank3D(distance, waterLevelCm, fillPercent, info) {
     tankWaveFillEl.style.height = fillPercent + "%";
     tankWaveFillEl.style.background = `linear-gradient(180deg, ${info.color}99 0%, ${info.color}55 100%)`;
     tankWavePathEl.setAttribute("fill", info.color);
     tankFloodGlowEl.classList.toggle("on", info.level === "danger");
-    tank3dValueEl.textContent = ((!isNaN(distance) && distance >= 0) ? distance.toFixed(1) : "--") + " cm";
+    // Hien thi muc nuoc dang thuc te (cm tinh tu duoi len, so voi tran cam bien) thay vi
+    // khoang cach thô giam dan - de dung voi cam nhan "nuoc dang cao bao nhieu".
+    tank3dValueEl.textContent = ((!isNaN(distance) && distance >= 0) ? waterLevelCm.toFixed(1) : "--") + " cm";
     tank3dValueEl.style.color = info.color;
-    tank3dFillLabelEl.textContent = `Mực nước: ${fillPercent.toFixed(0)} %`;
+    tank3dFillLabelEl.textContent = `Mực nước: ${fillPercent.toFixed(0)} % (tối đa ${MAX_DISTANCE.toFixed(0)} cm)`;
   }
 
   function animateWave() {
@@ -1335,27 +1151,6 @@
     requestAnimationFrame(animateWave);
   }
   animateWave();
-
-  let espBaseUrl = localStorage.getItem("espBaseUrl") || "http://192.168.4.1";
-  espIpInputEl.value = espBaseUrl.replace(/^https?:\/\//, "");
-
-  function normalizeToUrl(raw) {
-    let v = raw.trim();
-    if (!v) return "";
-    if (!/^https?:\/\//i.test(v)) v = "http://" + v;
-    return v.replace(/\/+$/, "");
-  }
-
-  espIpSaveBtnEl.addEventListener("click", () => {
-    const url = normalizeToUrl(espIpInputEl.value);
-    if (!url) return;
-    espBaseUrl = url;
-    localStorage.setItem("espBaseUrl", espBaseUrl);
-  });
-
-  espIpInputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") espIpSaveBtnEl.click();
-  });
 
   const MQTT_BROKER_WSS = "wss://f730af260a314bd6b762801931a0ed1e.s1.eu.hivemq.cloud:8884/mqtt";
   const MQTT_OPTIONS = {
@@ -1509,72 +1304,6 @@
     if (!historyPanelEl.classList.contains("open")) return;
     if (historyPanelEl.contains(e.target) || historyToggleBtnEl.contains(e.target)) return;
     closeHistoryPanel();
-  });
-
-  wifiOpenBtn.addEventListener("click", async () => {
-    wifiModal.classList.add("open");
-    wifiStatusBadge.innerHTML = "Đang kiểm tra trạng thái...";
-    wifiStatusBadge.style.color = "var(--text)";
-    wifiMsg.textContent = "";
-    try {
-      const res = await fetch(espBaseUrl + "/wifi-status");
-      const data = await res.json();
-      if (data.connected) {
-        wifiStatusBadge.innerHTML = `<span class="dot" style="background:var(--safe);box-shadow:0 0 6px var(--safe);"></span> Đã kết nối: ${data.ssid} (${data.ip})`;
-        wifiStatusBadge.style.color = "var(--safe)";
-      } else {
-        wifiStatusBadge.innerHTML = `<span class="dot" style="background:var(--warn);box-shadow:0 0 6px var(--warn);"></span> Chưa kết nối WiFi`;
-        wifiStatusBadge.style.color = "var(--warn)";
-      }
-    } catch (e) {
-      wifiStatusBadge.innerHTML = `<span class="dot" style="background:var(--danger);box-shadow:0 0 6px var(--danger);"></span> Lỗi kiểm tra kết nối`;
-      wifiStatusBadge.style.color = "var(--danger)";
-    }
-  });
-
-  wifiCloseBtn.addEventListener("click", () => wifiModal.classList.remove("open"));
-  wifiModal.addEventListener("click", (e) => {
-    if (e.target === wifiModal) wifiModal.classList.remove("open");
-  });
-
-  const wifiSsidManualInput = document.getElementById("wifiSsidManualInput");
-  const wifiStaticIpInput = document.getElementById("wifiStaticIpInput");
-  const wifiGatewayInput = document.getElementById("wifiGatewayInput");
-
-  wifiSaveBtn.addEventListener("click", async () => {
-    const key = wifiDevKeyInput.value.trim();
-    const ssid = wifiSsidManualInput.value.trim();
-    const pass = wifiPassInput.value;
-    const staticIp = wifiStaticIpInput.value.trim();
-    const gateway = wifiGatewayInput.value.trim();
-
-    if (!key || !ssid) {
-      wifiMsg.textContent = "Cần nhập Device Key và tên mạng WiFi!";
-      wifiMsg.style.color = "var(--warn)";
-      return;
-    }
-    wifiSaveBtn.disabled = true;
-    wifiSaveBtn.textContent = "Đang lưu cấu hình...";
-
-    try {
-      const payload = { ssid: ssid, password: pass };
-      if (staticIp) payload.staticIp = staticIp;
-      if (gateway) payload.gateway = gateway;
-
-      const res = await fetch(espBaseUrl + "/wifi-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Device-Key": key },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error("Lưu thất bại. Kiểm tra lại Device Key.");
-      wifiMsg.textContent = "Đã lưu! Thiết bị đang khởi động lại vào mạng mới. Hãy tải lại trang.";
-      wifiMsg.style.color = "var(--safe)";
-    } catch (e) {
-      wifiMsg.textContent = e.message;
-      wifiMsg.style.color = "var(--danger)";
-      wifiSaveBtn.disabled = false;
-      wifiSaveBtn.textContent = "Lưu & Kết Nối Lại";
-    }
   });
 
   document.querySelectorAll('a.page-link[href]').forEach(link => {
