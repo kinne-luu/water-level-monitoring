@@ -6,25 +6,22 @@
 <title>Cài Đặt & Lịch Sử Mực Nước</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <style>
   :root {
     --safe: #30d158;
     --warn: #ff9f0a;
     --danger: #ff453a;
-    --accent: #0a84ff;
-    --bg: #060b16;
-    --bg-glow: #0e1c3a;
-    --card: #0f1c38;
-    --card-inner: #14274a;
-    --text: #f5f7fb;
-    --muted: #93a3c2;
-    --border: rgba(255, 255, 255, 0.10);
-    --scrollbar: rgba(147, 163, 194, 0.4);
-    --shadow-lg: rgba(0, 0, 0, 0.5);
-    --shadow-md: rgba(0, 0, 0, 0.35);
-    --shadow-xl: rgba(0, 0, 0, 0.55);
-    --glow-accent: rgba(10, 132, 255, 0.55);
-    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2393a3c2' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    --accent: #4479b2;
+    --bg: #070e1e;
+    --bg-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cpath d='M36 33v6M33 36h6' stroke='%23326ca0' stroke-opacity='0.28' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+    --card: #0a1830;
+    --card-inner: #1b3f6b;
+    --text: #cce0f2;
+    --muted: #98c2e2;
+    --border: rgba(152, 194, 226, 0.22);
+    --scrollbar: rgba(152, 194, 226, 0.45);
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2398c2e2' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     color-scheme: dark;
   }
 
@@ -35,12 +32,8 @@
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
-    background:
-      radial-gradient(circle at 12% 8%, rgba(10, 132, 255, 0.16) 0%, transparent 45%),
-      radial-gradient(circle at 88% 12%, rgba(48, 209, 88, 0.10) 0%, transparent 40%),
-      radial-gradient(circle at 50% 100%, rgba(120, 90, 255, 0.10) 0%, transparent 45%),
-      radial-gradient(circle at 50% 0%, var(--bg-glow) 0%, var(--bg) 70%),
-      repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 26px);
+    background-color: var(--bg);
+    background-image: var(--bg-pattern);
     background-attachment: fixed;
     color: var(--text);
     display: flex;
@@ -53,27 +46,6 @@
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
     position: relative;
-    overflow: hidden;
-  }
-
-  body::before,
-  body::after {
-    content: "";
-    position: fixed;
-    border-radius: 50%;
-    filter: blur(90px);
-    pointer-events: none;
-    z-index: 0;
-  }
-  body::before {
-    width: 420px; height: 420px;
-    top: -140px; left: -120px;
-    background: radial-gradient(circle, rgba(10, 132, 255, 0.35), transparent 70%);
-  }
-  body::after {
-    width: 380px; height: 380px;
-    bottom: -160px; right: -100px;
-    background: radial-gradient(circle, rgba(48, 209, 88, 0.22), transparent 70%);
   }
 
   ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -91,7 +63,7 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
     background: transparent;
-    border-radius: 8px;
+    border-radius: 3px;
     transition: background 0.4s ease;
   }
   *:hover::-webkit-scrollbar-thumb,
@@ -113,9 +85,8 @@
     height: 100%;
     max-height: calc(100dvh - 24px);
     background: var(--card);
-    border-radius: 11px;
+    border-radius: 4px;
     border: 1px solid var(--border);
-    box-shadow: 0 24px 60px var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,0.06);
     display: flex;
     flex-direction: column;
     padding: 14px 16px;
@@ -124,7 +95,6 @@
     min-height: 0;
     position: relative;
     z-index: 1;
-    backdrop-filter: blur(2px);
   }
 
   .header {
@@ -157,7 +127,7 @@
     justify-content: center;
     width: 38px;
     height: 38px;
-    border-radius: 9px;
+    border-radius: 3px;
     background: var(--card-inner);
     border: 1px solid var(--border);
     color: var(--muted);
@@ -180,12 +150,12 @@
     font-size: 0.8125rem;
     font-weight: 600;
     padding: 8px 14px;
-    border-radius: 9px;
+    border-radius: 3px;
     min-height: 38px;
     transition: opacity 0.15s ease, transform 0.1s ease;
   }
   .nav-link:hover { opacity: 0.8; }
-  .nav-link svg { width: 15px; height: 15px; }
+  .nav-link svg { width: 15px; height: 15px; color: var(--muted); flex-shrink: 0; }
 
   .main-grid {
     display: grid;
@@ -217,7 +187,7 @@
 
   .panel {
     background: var(--card-inner);
-    border-radius: 9px;
+    border-radius: 3px;
     border: 1px solid var(--border);
     padding: 10px 12px;
     display: flex;
@@ -275,23 +245,23 @@
     color: var(--text);
     font-size: 0.78rem;
     padding: 7px 9px;
-    border-radius: 6px;
+    border-radius: 2px;
     width: 100%;
     font-variant-numeric: tabular-nums;
   }
   .ip-config input:focus { outline: 1px solid var(--accent); }
   .ip-config button {
-    background: color-mix(in srgb, var(--accent) 15%, transparent);
-    color: var(--accent);
-    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-    border-radius: 6px;
+    background: #326ca0;
+    color: #f2f8fd;
+    border: 1px solid #4479b2;
+    border-radius: 2px;
     padding: 7px 10px;
     font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
     width: 100%;
   }
-  .ip-config button:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+  .ip-config button:hover { background: #4479b2; }
 
   .threshold-row {
     display: flex;
@@ -315,7 +285,7 @@
     color: var(--text);
     font-size: 0.78rem;
     padding: 4px 6px;
-    border-radius: 7px;
+    border-radius: 3px;
     width: 62px;
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -330,7 +300,6 @@
   }
   input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
-  .threshold-hint { font-size: 0.66rem; color: var(--muted); line-height: 1.35; margin: 1px 0; }
   .threshold-status { font-size: 0.7rem; font-weight: 600; min-height: 0; }
   .threshold-status:empty { display: none; }
 
@@ -340,7 +309,7 @@
     justify-content: center;
     gap: 6px;
     border: none;
-    border-radius: 6px;
+    border-radius: 2px;
     padding: 7px 12px;
     font-size: 0.78rem;
     font-weight: 700;
@@ -352,12 +321,10 @@
   .btn-full { width: 100%; }
   .btn-excel { background: var(--safe); color: #06210f; }
   .btn-excel:hover { opacity: 0.88; }
-  .btn-accent { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
-  .btn-accent:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
-  .btn-refresh { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
-  .btn-refresh:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
-  .btn-danger { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); }
-  .btn-danger:hover { background: color-mix(in srgb, var(--danger) 25%, transparent); }
+  .btn-accent { background: #326ca0; color: #f2f8fd; border: 1px solid #4479b2; }
+  .btn-accent:hover { background: #4479b2; }
+  .btn-danger { background: #c62f27; color: #ffffff; border: 1px solid #e0463d; }
+  .btn-danger:hover { background: #d93a31; }
   .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 
   select {
@@ -379,11 +346,11 @@
     color: var(--text);
     font-size: 0.78rem;
     padding: 7px 10px;
-    border-radius: 6px;
+    border-radius: 2px;
   }
   .filter-select { background-color: var(--card-inner); }
   .filter-select:focus, .filter-input:focus { outline: 1px solid var(--accent); }
-  .filter-select:hover { border-color: rgba(255,255,255,0.18); }
+  .filter-select:hover { border-color: rgba(152,194,226,0.5); }
 
   .summary-grid {
     display: grid;
@@ -393,7 +360,7 @@
   }
   .summary-card {
     background: var(--card-inner);
-    border-radius: 10px;
+    border-radius: 3px;
     border: 1px solid var(--border);
     padding: 12px;
     text-align: center;
@@ -435,20 +402,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 999999;
+    z-index: 1000;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
     padding: 16px;
   }
   .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  #otaDetailModal { z-index: 1001; }
+  #noticeModal { z-index: 1002; }
   .modal-box {
     width: 100%;
     max-width: 380px;
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: 0 20px 50px var(--shadow-xl);
+    border-radius: 3px;
     padding: 18px;
     display: flex;
     flex-direction: column;
@@ -456,13 +424,14 @@
   }
   .modal-title { font-size: 1rem; font-weight: 700; color: var(--danger); }
   .modal-text { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+  .modal-text:empty { display: none; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   .btn-ghost { background: var(--card-inner); color: var(--text); border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: rgba(255,255,255,0.18); }
+  .btn-ghost:hover { border-color: rgba(152,194,226,0.5); }
 
   .table-wrap {
     background: var(--card-inner);
-    border-radius: 10px;
+    border-radius: 3px;
     border: 1px solid var(--border);
     overflow-y: auto;
     overflow-x: auto;
@@ -499,7 +468,7 @@
     align-items: center;
     gap: 5px;
     padding: 3px 9px;
-    border-radius: 999px;
+    border-radius: 4px;
     font-size: 0.7rem;
     font-weight: 700;
   }
@@ -509,7 +478,7 @@
 
   .ota-drop {
     border: 2px dashed var(--border);
-    border-radius: 8px;
+    border-radius: 3px;
     padding: 18px 10px;
     text-align: center;
     color: var(--muted);
@@ -521,38 +490,45 @@
   .ota-drop input { display: none; }
   .ota-modal-box { max-width: 920px; width: 95vw; height: 600px; max-height: 88vh; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
   .ota-field { background: var(--card-inner); border: 1px solid var(--border); color: var(--text);
-    padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; width: 100%; font-family: inherit; }
-  .ota-progress { height: 6px; background: var(--card-inner); border-radius: 99px; overflow: hidden; display: none; }
+    padding: 8px 10px; border-radius: 2px; font-size: 0.8rem; width: 100%; font-family: inherit; }
+  .ota-progress { height: 6px; background: var(--card-inner); border-radius: 4px; overflow: hidden; display: none; }
   .ota-progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
   .ota-status-line { font-size: 0.74rem; color: var(--muted); text-align: center; }
   .ota-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); grid-auto-rows: 1fr; gap: 10px; overflow-y: auto; padding: 6px 6px 6px 2px; align-content: start; overscroll-behavior: contain; }
-  .ota-item { background: var(--card-inner); border: 1px solid var(--border); border-radius: 9px; padding: 12px; display: flex; flex-direction: column; gap: 6px; height: 168px; transition: transform .18s ease, border-color .2s ease; }
+  .ota-item { background: var(--card-inner); border: 1px solid var(--border); border-radius: 3px; padding: 12px; display: flex; flex-direction: column; gap: 6px; height: 168px; transition: transform .18s ease, border-color .2s ease; }
   .ota-item:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
   .ota-item.active { border-color: var(--safe); box-shadow: inset 0 0 0 1px var(--safe); }
   .ota-item-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-shrink: 0; }
   .ota-version { font-weight: 700; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ota-badge { font-size: 0.62rem; background: var(--safe); color: #06210f; border-radius: 999px; padding: 2px 7px; font-weight: 700; flex-shrink: 0; }
+  .ota-badge { font-size: 0.62rem; background: var(--safe); color: #06210f; border-radius: 4px; padding: 2px 7px; font-weight: 700; flex-shrink: 0; }
   .ota-note { font-size: 0.73rem; color: var(--muted); line-height: 1.4; word-break: break-word; flex: 1; min-height: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
   .ota-meta { font-size: 0.65rem; color: var(--muted); opacity: 0.85; border-top: 1px solid var(--border); padding-top: 6px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ota-item-actions { display: flex; gap: 6px; margin-top: 4px; flex-shrink: 0; }
-  .ota-item-actions button { flex: 1; border: none; border-radius: 5px; padding: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: opacity .15s ease; }
+  .ota-item-actions button { flex: 1; border: none; border-radius: 2px; padding: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: opacity .15s ease; }
   .ota-item-actions button:hover { opacity: .85; }
-  .ota-btn-activate { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
-  .ota-btn-rollback { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
-  .ota-btn-delete { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+  .ota-btn-activate { background: #326ca0; color: #f2f8fd; }
+  .ota-btn-rollback { background: var(--warn); color: #1a1100; }
+  .ota-btn-delete { background: #c62f27; color: #ffffff; }
+  .ota-item-side { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .ota-btn-detail { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 2px; padding: 3px 8px; font-size: 0.66rem; font-weight: 700; cursor: pointer; }
+  .ota-btn-detail:hover { border-color: rgba(152,194,226,0.5); }
+  .ota-detail-box { max-width: 520px; max-height: 80vh; }
+  .ota-detail-meta { font-size: 0.72rem; color: var(--muted); }
+  .ota-detail-note { font-size: 0.84rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
 
   .ota-modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
   .ota-modal-body { display: grid; grid-template-columns: 280px 1fr; gap: 16px; flex: 1 1 auto; min-height: 0; overflow: hidden; }
-  .ota-upload-pane { display: flex; flex-direction: column; gap: 10px; background: color-mix(in srgb, var(--card-inner) 60%, transparent); border: 1px solid var(--border); border-radius: 9px; padding: 14px; overflow-y: auto; overscroll-behavior: contain; }
+  .ota-upload-pane { display: flex; flex-direction: column; gap: 10px; background: color-mix(in srgb, var(--card-inner) 60%, transparent); border: 1px solid var(--border); border-radius: 3px; padding: 14px; overflow-y: auto; overscroll-behavior: contain; }
   .ota-list-pane { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
 
   .ota-checkin-box {
     display: none;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     background: color-mix(in srgb, var(--accent) 10%, transparent);
     border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-    border-radius: 9px;
+    border-radius: 3px;
     padding: 10px 14px;
     flex-shrink: 0;
   }
@@ -582,10 +558,22 @@
 
   .wifi-field { display: flex; flex-direction: column; gap: 6px; }
   .wifi-field label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
-  .wifi-input { background: var(--card-inner); border: 1px solid var(--border); color: var(--text); font-size: 0.85rem; padding: 10px 14px; border-radius: 8px; width: 100%; outline: none; transition: border-color 0.2s; }
+  .wifi-input { background: var(--card-inner); border: 1px solid var(--border); color: var(--text); font-size: 0.85rem; padding: 10px 14px; border-radius: 3px; width: 100%; outline: none; transition: border-color 0.2s; }
   .wifi-input:focus { border-color: var(--accent); }
   .wifi-status-box { display: flex; align-items: center; gap: 8px; padding: 6px 2px; font-size: 0.78rem; font-weight: 600; color: var(--muted); }
   .wifi-status-box .dot { flex-shrink: 0; }
+
+
+  .ota-checkin-box .ota-live-percent { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text); min-width: 3.2em; text-align: right; }
+  .ota-live-bar { flex: 1 0 100%; height: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; order: 5; }
+  .ota-live-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.25s ease; }
+  .ota-checkin-box.done .ota-live-fill { background: var(--safe); }
+  .ota-checkin-box.done.error .ota-live-fill { background: var(--danger); }
+  .ota-log { flex: 1 0 100%; order: 6; display: none; margin: 0; height: 150px; overflow-y: auto; overflow-x: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 2px; padding: 8px 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.72rem; line-height: 1.5; color: var(--text); white-space: pre-wrap; word-break: break-word; overscroll-behavior: contain; }
+  .ota-log.open { display: block; }
+  .ota-log .l-err { color: #ff6b62; }
+  .ota-log .l-ok { color: #4be07a; }
+  .ota-log .l-time { color: var(--muted); }
 
   @media (max-width: 760px) {
     html, body {
@@ -608,7 +596,6 @@
       border-radius: 0;
       border-left: 0;
       border-right: 0;
-      box-shadow: none;
       padding: 12px;
     }
     .header {
@@ -642,7 +629,7 @@
       overflow: visible;
       padding: 10px;
       padding-right: 10px;
-      border-radius: 10px;
+      border-radius: 3px;
       background: color-mix(in srgb, var(--card-inner) 58%, transparent);
       border: 1px solid var(--border);
       gap: 10px;
@@ -653,7 +640,7 @@
       min-height: auto;
       overflow: visible;
       padding: 10px;
-      border-radius: 10px;
+      border-radius: 3px;
       background: color-mix(in srgb, var(--card-inner) 28%, transparent);
       border: 1px solid var(--border);
       gap: 12px;
@@ -675,9 +662,6 @@
       flex-direction: column;
       width: 100%;
       gap: 8px;
-    }
-    .filter-select, .filter-input, .btn-refresh, .toolbar-left .btn-danger {
-      width: 100%;
     }
     .table-wrap {
       max-height: 50dvh;
@@ -714,18 +698,42 @@
   body.page-leaving { opacity: 0; transform: translateY(8px); transition: opacity .18s ease, transform .18s ease; }
   @keyframes pageEnter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .nav-link:active { transform: scale(.96); }
-  .nav-link svg { flex-shrink: 0; }
 
   @media (min-width: 761px) {
     .main-grid { grid-template-columns: minmax(270px, .82fr) minmax(0, 1.9fr); gap: 12px; }
-    .control-col { background: color-mix(in srgb, var(--card-inner) 58%, transparent); border: 1px solid var(--border); border-radius: 11px; padding: 8px; gap: 7px; }
-    .control-col .panel { border-radius: 11px; padding: 9px 11px; gap: 6px; }
+    .control-col { background: color-mix(in srgb, var(--card-inner) 58%, transparent); border: 1px solid var(--border); border-radius: 4px; padding: 8px; gap: 7px; }
+    .control-col .panel { border-radius: 4px; padding: 9px 11px; gap: 6px; }
     .control-col .panel.open .panel-body { margin-top: 6px; }
-    .info-col { background: color-mix(in srgb, var(--card-inner) 28%, transparent); border: 1px solid var(--border); border-radius: 11px; padding: 12px; }
+    .info-col { background: color-mix(in srgb, var(--card-inner) 28%, transparent); border: 1px solid var(--border); border-radius: 4px; padding: 12px; }
     .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .summary-card { padding: 10px; }
-    .toolbar { background: var(--card-inner); border: 1px solid var(--border); border-radius: 11px; padding: 8px; }
-    .table-wrap { border-radius: 11px; }
+    .toolbar { background: var(--card-inner); border: 1px solid var(--border); border-radius: 4px; padding: 8px; }
+    .table-wrap { border-radius: 4px; }
+  }
+  @media (max-width: 760px) {
+    .filter-input, .filter-select, .threshold-input, .wifi-input, .ota-field, .ota-drop input { font-size: 16px; }
+    .dashboard { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+    .header { top: env(safe-area-inset-top, 0px); }
+    .header-status { gap: 6px; }
+    .conn-badge { white-space: normal; line-height: 1.3; }
+    .btn, .nav-link, .theme-toggle-btn { min-height: 40px; }
+    thead th { padding: 8px 8px; font-size: 0.64rem; }
+    tbody td { padding: 7px 8px; font-size: 0.74rem; }
+    .modal-overlay { padding: 10px; align-items: flex-end; }
+    .modal-box { max-width: 100%; max-height: 92dvh; overflow-y: auto; padding: 14px; }
+    .ota-modal-box { width: 100%; height: 92dvh; max-height: 92dvh; padding: 12px; gap: 10px; }
+    .ota-modal-body { display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; gap: 12px; -webkit-overflow-scrolling: touch; }
+    .ota-upload-pane { overflow: visible; flex-shrink: 0; padding: 10px; }
+    .ota-list-pane { overflow: visible; flex-shrink: 0; }
+    .ota-list { display: flex; flex-direction: column; overflow: visible; padding: 2px; }
+    .ota-item { height: auto; min-height: 140px; }
+    .ota-item-actions { flex-wrap: wrap; }
+    .ota-item-actions button { min-height: 38px; flex: 1 1 45%; }
+    .ota-btn-detail { padding: 6px 10px; min-height: 32px; }
+    .ota-checkin-box { padding: 10px; gap: 8px; }
+    .ota-checkin-box .btn { flex: 1 1 auto; padding: 9px 10px; }
+    .ota-checkin-body { flex: 1 1 60%; }
+    .ota-log { height: 120px; font-size: 0.68rem; }
   }
 </style>
 </head>
@@ -811,9 +819,7 @@
             <span class="threshold-unit">cm</span>
           </div>
         </div>
-        <div class="threshold-hint" style="margin-top:-6px;">Khoảng cách từ cảm biến đến đáy/mặt đất, dùng để tính mực nước dâng.</div>
 
-        <div class="threshold-hint">Hệ thống cập nhật sau khi lưu trong 20s.</div>
         <div id="thresholdStatus" class="threshold-status"></div>
         <button id="thresholdSaveBtn" class="btn btn-accent btn-full">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -887,7 +893,7 @@
             <option value="error">Lỗi</option>
           </select>
           <input type="text" id="deviceFilter" class="filter-input" placeholder="Lọc theo device_id" autocomplete="off">
-          <button id="refreshBtn" class="btn btn-refresh">
+          <button id="refreshBtn" class="btn btn-accent">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
             Làm mới
           </button>
@@ -910,7 +916,7 @@
             </tr>
           </thead>
           <tbody id="dataBody">
-            <tr class="empty-row"><td colspan="5">Chưa có dữ liệu. Nhập URL Worker và bấm Kết nối.</td></tr>
+            <tr class="empty-row"><td colspan="5">Chưa có dữ liệu.</td></tr>
           </tbody>
         </table>
       </div>
@@ -923,10 +929,7 @@
 <div id="deleteModal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-title">Xoá dữ liệu trên D1?</div>
-    <div class="modal-text">
-      Thao tác này sẽ xoá vĩnh viễn dữ liệu trong bảng <strong>readings</strong> trên D1 và không thể hoàn tác.
-      Chọn phạm vi xoá bên dưới rồi xác nhận.
-    </div>
+    <div class="modal-text">Xoá vĩnh viễn dữ liệu trong bảng <strong>readings</strong> trên D1, không thể hoàn tác.</div>
     <select id="deleteScope" class="filter-select" style="width:100%;">
       <option value="all">Xoá toàn bộ dữ liệu</option>
       <option value="device">Chỉ xoá theo device_id đang lọc</option>
@@ -950,18 +953,14 @@
 
 <div id="wifiModal" class="modal-overlay">
   <div class="modal-box" style="max-width: 400px;">
-    <div class="ota-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="ota-modal-header">
       <div class="modal-title" style="color:var(--text); display:flex; align-items:center; gap:8px;">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
         Cấu Hình WiFi Thiết Bị
-        <button id="wifiHelpBtn" type="button" aria-label="Giải thích" title="Dùng khi WiFi cũ bị đổi mật khẩu hoặc đổi router. Nhập mạng mới ở đây và Lưu để ESP32 chuyển sang dùng mạng đó." style="width:18px; height:18px; border-radius:50%; border:1px solid var(--border); background:var(--card); color:var(--muted); font-size:0.68rem; font-weight:700; line-height:1; display:inline-flex; align-items:center; justify-content:center; cursor:help; flex-shrink:0; padding:0;">?</button>
       </div>
       <button id="wifiCloseBtn" class="btn btn-ghost" style="padding: 5px; font-size: 1.2rem; line-height: 1;">✕</button>
     </div>
 
-    <div id="wifiHelpNote" style="display:none; font-size: 0.75rem; color: var(--muted); line-height: 1.6; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;">
-      Khi WiFi cũ bị đổi mật khẩu hoặc đổi router, ESP32 sẽ không tự vào mạng được nữa. Nhập tên mạng mới và mật khẩu mới ở form bên dưới rồi bấm Lưu — thiết bị sẽ khởi động lại và chuyển sang dùng mạng đó.
-    </div>
 
     <div class="wifi-field">
       <label>Trạng thái</label>
@@ -982,7 +981,7 @@
     </div>
 
     <div class="wifi-field">
-      <label>Tên WiFi mới(SSID) </label>
+      <label>Tên WiFi mới (SSID)</label>
       <input type="text" id="wifiSsidManualInput" class="wifi-input" placeholder="Tên WiFi">
     </div>
 
@@ -991,7 +990,7 @@
       <input type="password" id="wifiPassInput" class="wifi-input" placeholder="Mật khẩu">
     </div>
 
-    <button id="wifiSaveBtn" class="btn btn-safe btn-full" style="background: rgba(34, 197, 94, 0.15); color: var(--safe); border: 1px solid rgba(34, 197, 94, 0.35);">Lưu & Kết Nối Lại</button>
+    <button id="wifiSaveBtn" class="btn btn-excel btn-full">Lưu & Kết Nối Lại</button>
 
     <div id="wifiMsg" style="font-size: 0.75rem; text-align: center; min-height: 18px; font-weight: 600;"></div>
   </div>
@@ -1007,16 +1006,20 @@
     <div class="ota-checkin-box" id="otaCheckinBox">
       <span class="ota-checkin-dot" id="otaCheckinDot"></span>
       <div class="ota-checkin-body">
-        <div class="ota-checkin-title" id="otaCheckinTitle">Đang chờ chip checkin...</div>
+        <div class="ota-checkin-title" id="otaCheckinTitle">Đang chờ chip...</div>
         <div class="ota-checkin-sub" id="otaCheckinSub"></div>
       </div>
-      <button id="otaCheckinConfirmBtn" class="btn btn-accent" style="display:none;">Xác nhận</button>
+      <span class="ota-live-percent" id="otaLivePercent">0%</span>
+      <button id="otaLogBtn" class="btn btn-ghost" type="button" style="padding: 7px 12px;">Log</button>
+      <button id="otaCheckinConfirmBtn" class="btn btn-ghost" type="button" style="display:none; padding: 7px 12px;">Ẩn</button>
+      <div class="ota-live-bar"><div class="ota-live-fill" id="otaLiveFill"></div></div>
+      <pre class="ota-log" id="otaLogView" data-lenis-prevent></pre>
     </div>
 
     <div class="ota-modal-body">
       <div class="ota-upload-pane" data-lenis-prevent>
         <div class="ota-drop" id="otaDrop">
-          Kéo thả file <strong>.bin</strong> hoặc bấm chọn
+          <span id="otaDropText">Kéo thả hoặc chọn file .bin</span>
           <input type="file" id="otaFile" accept=".bin">
         </div>
 
@@ -1028,10 +1031,29 @@
       </div>
 
       <div class="ota-list-pane">
+        <div class="ota-checkin-box" id="otaFwBox" style="display:flex;">
+          <span class="ota-checkin-dot" id="otaFwDot"></span>
+          <div class="ota-checkin-body">
+            <div class="ota-checkin-title" id="otaFwTitle">Chip đang chạy: chưa rõ</div>
+            <div class="ota-checkin-sub" id="otaFwSub">Chưa nhận được thông tin phiên bản</div>
+          </div>
+          <button id="otaFwBtn" class="btn btn-ghost" type="button" style="padding: 7px 12px;">Kiểm tra phiên bản</button>
+        </div>
         <div class="ota-status-line" id="otaDeviceStatus">Đang tải danh sách...</div>
         <div class="ota-list" id="otaList" data-lenis-prevent></div>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="otaDetailModal" class="modal-overlay">
+  <div class="modal-box ota-detail-box">
+    <div class="ota-modal-header">
+      <div class="modal-title" id="otaDetailTitle" style="color:var(--text);"></div>
+      <button id="otaDetailCloseBtn" class="btn btn-ghost" style="padding: 5px 12px; font-size: 0.75rem;">Đóng</button>
+    </div>
+    <div class="ota-detail-meta" id="otaDetailMeta"></div>
+    <div class="ota-detail-note" id="otaDetailNote" data-lenis-prevent></div>
   </div>
 </div>
 
@@ -1078,9 +1100,9 @@
     noticeModalEl.classList.add("open");
   }
   noticeOkBtnEl.addEventListener("click", () => noticeModalEl.classList.remove("open"));
-  noticeModalEl.addEventListener("click", (e) => {
-    if (e.target === noticeModalEl) noticeModalEl.classList.remove("open");
-  });
+  document.querySelectorAll(".modal-overlay").forEach(m => m.addEventListener("click", (e) => {
+    if (e.target === m) m.classList.remove("open");
+  }));
 
   const thresholdDangerEl = document.getElementById("thresholdDanger");
   const thresholdWarnEl = document.getElementById("thresholdWarn");
@@ -1111,9 +1133,7 @@
     localStorage.setItem("deviceId", currentDeviceId);
   }
 
-  deviceFilterEl.addEventListener("input", syncDeviceIdFromField);
-  deviceFilterEl.addEventListener("change", syncDeviceIdFromField);
-  deviceFilterEl.addEventListener("blur", syncDeviceIdFromField);
+  deviceFilterEl.addEventListener("input", () => { syncDeviceIdFromField(); renderTable(); });
 
   const DEFAULT_THRESHOLDS = { danger: 15, warn: 40, detect: 180, sensorHeight: 200 };
   function loadThresholds() {
@@ -1131,7 +1151,6 @@
   thresholdDetectEl.value = thresholds.detect;
   sensorHeightInputEl.value = thresholds.sensorHeight;
 
-  // Dong bo tu server khi mo trang, de nhieu trinh duyet/thiet bi luon thay cung 1 cau hinh.
   async function syncSettingsFromServer() {
     if (!workerBaseUrl) return;
     try {
@@ -1151,11 +1170,14 @@
         thresholdDetectEl.value = thresholds.detect;
         sensorHeightInputEl.value = thresholds.sensorHeight;
       }
-    } catch (e) {
-      // Khong ket noi duoc server, giu nguyen gia tri cuc bo hien co.
-    }
+    } catch (e) {}
   }
   syncSettingsFromServer();
+
+  function setThresholdStatus(msg, color) {
+    thresholdStatusEl.textContent = msg;
+    thresholdStatusEl.style.color = color;
+  }
 
   thresholdSaveBtnEl.addEventListener("click", async () => {
     const danger = parseFloat(thresholdDangerEl.value);
@@ -1164,44 +1186,34 @@
     const sensorHeight = parseFloat(sensorHeightInputEl.value);
 
     if (![danger, warn, detect].every(v => Number.isFinite(v) && v >= 0)) {
-      thresholdStatusEl.textContent = "Giá trị ngưỡng không hợp lệ.";
-      thresholdStatusEl.style.color = "var(--danger)";
-      return;
+      return setThresholdStatus("Giá trị ngưỡng không hợp lệ.", "var(--danger)");
     }
     if (!(danger < warn && warn < detect)) {
-      thresholdStatusEl.textContent = "Cần đảm bảo: Nguy hiểm < Trung bình < Phát hiện.";
-      thresholdStatusEl.style.color = "var(--danger)";
-      return;
+      return setThresholdStatus("Cần: Nguy hiểm < Trung bình < Phát hiện.", "var(--danger)");
     }
     if (!Number.isFinite(sensorHeight) || sensorHeight <= 0) {
-      thresholdStatusEl.textContent = "Độ cao cảm biến không hợp lệ.";
-      thresholdStatusEl.style.color = "var(--danger)";
-      return;
+      return setThresholdStatus("Độ cao cảm biến không hợp lệ.", "var(--danger)");
     }
 
     thresholds = { danger, warn, detect, sensorHeight };
     localStorage.setItem("alertThresholds", JSON.stringify(thresholds));
-    thresholdStatusEl.textContent = "Đã lưu ngưỡng cục bộ.";
-    thresholdStatusEl.style.color = "var(--safe)";
+    if (!(workerBaseUrl && deviceKey)) {
+      return setThresholdStatus("Đã lưu cục bộ, chưa gửi lên máy chủ.", "var(--warn)");
+    }
 
-    if (workerBaseUrl && deviceKey) {
-      thresholdSaveBtnEl.disabled = true;
-      try {
-        const res = await fetch(workerBaseUrl + "/setting-log", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Device-Key": deviceKey },
-          body: JSON.stringify({ danger, warn, detect, sensorHeight, deviceId: currentDeviceId || "HCSR04" })
-        });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        thresholdStatusEl.textContent = "Đã lưu ngưỡng, độ cao cảm biến và ghi log lên máy chủ.";
-      } catch (e) {
-        thresholdStatusEl.textContent = "Đã lưu cục bộ, nhưng ghi log thất bại: " + e.message;
-        thresholdStatusEl.style.color = "var(--warn)";
-      } finally {
-        thresholdSaveBtnEl.disabled = false;
-      }
-    } else {
-      thresholdStatusEl.textContent += " (Nhập Worker URL + Device Key để đồng bộ log)";
+    thresholdSaveBtnEl.disabled = true;
+    try {
+      const res = await fetch(workerBaseUrl + "/setting-log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Device-Key": deviceKey },
+        body: JSON.stringify({ danger, warn, detect, sensorHeight, deviceId: currentDeviceId || "HCSR04" })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      setThresholdStatus("Đã lưu và ghi log lên máy chủ.", "var(--safe)");
+    } catch (e) {
+      setThresholdStatus("Đã lưu cục bộ, ghi log thất bại: " + e.message, "var(--warn)");
+    } finally {
+      thresholdSaveBtnEl.disabled = false;
     }
   });
 
@@ -1219,15 +1231,14 @@
     return new Date(epoch * 1000).toLocaleString("vi-VN");
   }
 
-  function renderTable() {
-    const levelFilter = levelFilterEl.value;
-    const deviceFilter = deviceFilterEl.value.trim().toLowerCase();
+  function filteredRows() {
+    const level = levelFilterEl.value;
+    const device = deviceFilterEl.value.trim().toLowerCase();
+    return allRows.filter(r => (!level || r.level === level) && (!device || (r.device_id || "").toLowerCase().includes(device)));
+  }
 
-    const filtered = allRows.filter(r => {
-      if (levelFilter && r.level !== levelFilter) return false;
-      if (deviceFilter && !(r.device_id || "").toLowerCase().includes(deviceFilter)) return false;
-      return true;
-    });
+  function renderTable() {
+    const filtered = filteredRows();
 
     if (filtered.length === 0) {
       dataBodyEl.innerHTML = '<tr class="empty-row"><td colspan="5">Không có dữ liệu phù hợp.</td></tr>';
@@ -1274,18 +1285,50 @@
     if (!workerBaseUrl) return;
     connStatusEl.textContent = "○ Đang tải...";
     connStatusEl.style.color = "var(--warn)";
-    try {
-      const res = await fetch(workerBaseUrl + "/history-data", { cache: "no-store", mode: "cors" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const rows = await res.json();
+    const DEFAULT_WORKER_URL = "https://waterlevelmonitor.luumanhkien08092006.workers.dev";
+    const tryUrl = async (base) => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
+      try {
+        const res = await fetch(base + "/history-data", { cache: "no-store", mode: "cors", signal: ctrl.signal });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.json();
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+    let rows = null;
+    let lastErr = null;
+    const candidates = [workerBaseUrl];
+    if (workerBaseUrl !== DEFAULT_WORKER_URL) candidates.push(DEFAULT_WORKER_URL);
+    for (const base of candidates) {
+      try {
+        rows = await tryUrl(base);
+        if (base !== workerBaseUrl) {
+          workerBaseUrl = base;
+          workerUrlInputEl.value = base;
+          localStorage.setItem("workerBaseUrl", base);
+        }
+        break;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    if (rows !== null) {
       allRows = Array.isArray(rows) ? rows : [];
       connStatusEl.textContent = "● Online";
       connStatusEl.style.color = "var(--safe)";
+      connStatusEl.title = "";
       lastFetchEl.textContent = "Cập nhật lúc: " + new Date().toLocaleTimeString("vi-VN");
       renderTable();
-    } catch (e) {
+    } else {
+      let reason = "không kết nối được mạng/Worker";
+      if (lastErr && lastErr.name === "AbortError") reason = "quá thời gian chờ";
+      else if (lastErr && /^HTTP/.test(lastErr.message)) reason = lastErr.message;
       connStatusEl.textContent = "✕ Mất kết nối Worker";
+      connStatusEl.title = reason;
       connStatusEl.style.color = "var(--danger)";
+      lastFetchEl.textContent = "Lỗi: " + reason;
     }
   }
 
@@ -1304,21 +1347,14 @@
   });
 
   levelFilterEl.addEventListener("change", renderTable);
-  deviceFilterEl.addEventListener("input", renderTable);
   refreshBtnEl.addEventListener("click", fetchData);
 
   exportBtnEl.addEventListener("click", () => {
     if (allRows.length === 0) {
-      showNotice("Không có dữ liệu", "Chưa có dữ liệu để xuất.", "error");
+      showNotice("Chưa có dữ liệu để xuất", "", "error");
       return;
     }
-    const levelFilter = levelFilterEl.value;
-    const deviceFilter = deviceFilterEl.value.trim().toLowerCase();
-    const filtered = allRows.filter(r => {
-      if (levelFilter && r.level !== levelFilter) return false;
-      if (deviceFilter && !(r.device_id || "").toLowerCase().includes(deviceFilter)) return false;
-      return true;
-    });
+    const filtered = filteredRows();
 
     const sheetData = filtered.map(r => ({
       "Thời gian": formatTs(r.epoch),
@@ -1343,17 +1379,14 @@
   deleteCancelBtnEl.addEventListener("click", () => {
     deleteModalEl.classList.remove("open");
   });
-  deleteModalEl.addEventListener("click", (e) => {
-    if (e.target === deleteModalEl) deleteModalEl.classList.remove("open");
-  });
 
   deleteConfirmBtnEl.addEventListener("click", async () => {
     if (!workerBaseUrl) {
-      showNotice("Thiếu cấu hình", "Chưa có URL Worker.", "error");
+      showNotice("Chưa có URL Worker", "", "error");
       return;
     }
     if (!deviceKey) {
-      showNotice("Thiếu Device Key", "Cần nhập Device Key để xác thực xoá dữ liệu.", "error");
+      showNotice("Thiếu Device Key", "", "error");
       return;
     }
     const scope = deleteScopeEl.value;
@@ -1361,7 +1394,7 @@
     const body = { scope };
     if (scope === "device") {
       if (!deviceFilter) {
-        showNotice("Thiếu device_id", "Hãy nhập device_id ở ô lọc trước khi chọn xoá theo device.", "error");
+        showNotice("Thiếu device_id", "", "error");
         return;
       }
       body.deviceId = deviceFilter;
@@ -1381,7 +1414,7 @@
       if (!res.ok) throw new Error("HTTP " + res.status);
       deleteModalEl.classList.remove("open");
       await fetchData();
-      showNotice("Thành công", "Đã xoá dữ liệu thành công.", "success");
+      showNotice("Đã xoá dữ liệu", "", "success");
     } catch (e) {
       showNotice("Xoá thất bại", e.message, "error");
     } finally {
@@ -1397,6 +1430,8 @@
   const otaModalEl = document.getElementById("otaModal");
   const otaCloseBtnEl = document.getElementById("otaCloseBtn");
   const otaDropEl = document.getElementById("otaDrop");
+  const otaDropTextEl = document.getElementById("otaDropText");
+  const OTA_DROP_TEXT = otaDropTextEl.textContent;
   const otaFileEl = document.getElementById("otaFile");
   const otaVersionEl = document.getElementById("otaVersion");
   const otaNoteEl = document.getElementById("otaNote");
@@ -1437,7 +1472,9 @@
     otaCheckinBoxEl.classList.remove("done");
     otaCheckinDotEl.classList.add("pulse");
     otaCheckinConfirmBtnEl.style.display = "none";
-    otaCheckinTitleEl.textContent = `Đang chờ chip checkin bản ${version || ""}...`;
+    otaCheckinBoxEl.classList.remove("error");
+    otaLiveSetPercent(0);
+    otaCheckinTitleEl.textContent = `Đang chờ chip nhận bản ${version || ""}...`;
     otaCheckinSubEl.textContent = `Đã gửi lệnh lúc ${new Date().toLocaleTimeString("vi-VN")} · device: ${deviceId}`;
 
     otaCheckinPoll();
@@ -1476,31 +1513,16 @@
   }
 
   function otaCheckinTimeout() {
-    clearInterval(otaCheckinTimer);
-    otaCheckinTimer = null;
-    otaCheckinDotEl.classList.remove("pulse");
-    otaCheckinBoxEl.classList.add("done", "error");
-    otaCheckinTitleEl.textContent = "Không nhận được phản hồi từ chip";
-    otaCheckinSubEl.textContent = "Chip có thể mất kết nối WiFi giữa chừng hoặc chưa checkin kịp. Kiểm tra lại thiết bị.";
-    otaCheckinConfirmBtnEl.style.display = "inline-flex";
+    otaLiveFinishUi(false, "Không nhận được phản hồi từ chip", "");
   }
 
   function otaCheckinFinish(ok, data) {
-    clearInterval(otaCheckinTimer);
-    otaCheckinTimer = null;
-    otaCheckinDotEl.classList.remove("pulse");
-    otaCheckinBoxEl.classList.add("done");
-    otaCheckinBoxEl.classList.toggle("error", !ok);
+    const time = new Date(data.ts).toLocaleTimeString("vi-VN");
     if (ok) {
-      otaCheckinTitleEl.textContent = `Chip đã lên bản ${data.version} thành công`;
-      otaCheckinSubEl.textContent = `Xác nhận lúc ${new Date(data.ts).toLocaleTimeString("vi-VN")}`;
+      otaLiveFinishUi(true, `Chip đã lên bản ${data.version} thành công`, `Xác nhận lúc ${time}`);
     } else {
-      otaCheckinTitleEl.textContent = `Cập nhật thất bại (bản ${data.version || otaCheckinExpectedVersion})`;
-      otaCheckinSubEl.textContent = data.error
-        ? `Lỗi: ${data.error}`
-        : `Chip báo lỗi lúc ${new Date(data.ts).toLocaleTimeString("vi-VN")}`;
+      otaLiveFinishUi(false, `Cập nhật thất bại (bản ${data.version || otaCheckinExpectedVersion})`, data.error ? `Lỗi: ${data.error}` : `Chip báo lỗi lúc ${time}`);
     }
-    otaCheckinConfirmBtnEl.style.display = "inline-flex";
   }
 
   otaCheckinConfirmBtnEl.addEventListener("click", () => {
@@ -1510,19 +1532,216 @@
     otaCheckinBoxEl.classList.remove("done", "error");
   });
 
+  const otaLivePercentEl = document.getElementById("otaLivePercent");
+  const otaLiveFillEl = document.getElementById("otaLiveFill");
+  const otaLogBtnEl = document.getElementById("otaLogBtn");
+  const otaLogViewEl = document.getElementById("otaLogView");
+  const OTA_LOG_MAX = 400;
+  const otaLogLines = [];
+  let otaLiveHideTimer = null;
+  let otaLiveActive = false;
+  let otaMqttClient = null;
+
+  function otaLiveSetPercent(p) {
+    const v = Math.max(0, Math.min(100, Math.round(p)));
+    otaLivePercentEl.textContent = v + "%";
+    otaLiveFillEl.style.width = v + "%";
+  }
+
+  function otaLogAdd(text, cls) {
+    const t = new Date().toLocaleTimeString("vi-VN");
+    otaLogLines.push({ t, text, cls: cls || "" });
+    if (otaLogLines.length > OTA_LOG_MAX) otaLogLines.shift();
+    if (otaLogViewEl.classList.contains("open")) otaLogRender(true);
+  }
+
+  function otaLogRender(stick) {
+    const nearBottom = otaLogViewEl.scrollHeight - otaLogViewEl.scrollTop - otaLogViewEl.clientHeight < 40;
+    otaLogViewEl.innerHTML = otaLogLines.map(l =>
+      `<div><span class="l-time">${l.t}</span> <span class="${l.cls}">${otaEscape(l.text)}</span></div>`
+    ).join("");
+    if (!stick || nearBottom) otaLogViewEl.scrollTop = otaLogViewEl.scrollHeight;
+  }
+
+  otaLogBtnEl.addEventListener("click", () => {
+    const open = otaLogViewEl.classList.toggle("open");
+    otaLogBtnEl.textContent = open ? "Ẩn log" : "Log";
+    if (open) otaLogRender(false);
+  });
+
+  function otaLiveShow() {
+    clearTimeout(otaLiveHideTimer);
+    otaCheckinBoxEl.style.display = "flex";
+    otaCheckinConfirmBtnEl.style.display = "none";
+  }
+
+  function otaLiveFinishUi(ok, title, sub) {
+    clearInterval(otaCheckinTimer);
+    otaCheckinTimer = null;
+    otaLiveActive = false;
+    otaCheckinDotEl.classList.remove("pulse");
+    otaCheckinBoxEl.classList.add("done");
+    otaCheckinBoxEl.classList.toggle("error", !ok);
+    otaCheckinTitleEl.textContent = title;
+    otaCheckinSubEl.textContent = sub;
+    otaCheckinConfirmBtnEl.style.display = "inline-flex";
+    if (ok) {
+      otaLiveSetPercent(100);
+      otaLiveHideTimer = setTimeout(() => {
+        if (!otaLiveActive) otaCheckinBoxEl.style.display = "none";
+      }, 12000);
+    }
+  }
+
+  function otaLiveHandle(d) {
+    if (!d || !d.stage) return;
+    const ver = d.version || "";
+    const kb = n => (Number(n || 0) / 1024).toFixed(1);
+    if (d.stage !== "done" && d.stage !== "rollback") {
+      otaLiveActive = true;
+      otaLiveShow();
+      otaCheckinBoxEl.classList.remove("done", "error");
+      otaCheckinDotEl.classList.add("pulse");
+    }
+    switch (d.stage) {
+      case "start":
+        clearInterval(otaCheckinTimer);
+        otaCheckinTimer = null;
+        otaLiveSetPercent(0);
+        otaCheckinTitleEl.textContent = `Chip bắt đầu cập nhật bản ${ver}`;
+        otaCheckinSubEl.textContent = d.msg || "";
+        otaLogAdd(`[OTA] bắt đầu cập nhật ${d.from || ""} → ${ver}`);
+        break;
+      case "download":
+        clearInterval(otaCheckinTimer);
+        otaCheckinTimer = null;
+        otaLiveSetPercent(d.percent);
+        otaCheckinTitleEl.textContent = `Đang tải firmware bản ${ver}`;
+        otaCheckinSubEl.textContent = `${kb(d.written)} / ${kb(d.total)} KB`;
+        break;
+      case "verify":
+        otaLiveSetPercent(100);
+        otaCheckinTitleEl.textContent = "Đang kiểm tra firmware...";
+        otaCheckinSubEl.textContent = d.msg || "";
+        otaLogAdd("[OTA] tải xong, đang kiểm tra firmware");
+        break;
+      case "reboot":
+        otaLiveSetPercent(100);
+        otaCheckinTitleEl.textContent = "Chip đang khởi động lại bản mới...";
+        otaCheckinSubEl.textContent = "";
+        otaLogAdd("[OTA] đã ghi xong, chip khởi động lại", "l-ok");
+        otaCheckinDeviceId = otaDeviceId();
+        otaCheckinExpectedVersion = ver;
+        otaCheckinStartedMs = Date.now();
+        clearInterval(otaCheckinTimer);
+        otaCheckinTimer = setInterval(otaCheckinPoll, 3000);
+        break;
+      case "done":
+        otaLogAdd(`[OTA] chip đã chạy ổn định bản ${ver}`, "l-ok");
+        otaLiveFinishUi(true, `Chip đã lên bản ${ver} thành công`, `Hoàn tất lúc ${new Date().toLocaleTimeString("vi-VN")}`);
+        break;
+      case "failed":
+        otaLogAdd(`[OTA] thất bại: ${d.msg || "không rõ lỗi"}`, "l-err");
+        otaLiveFinishUi(false, `Cập nhật thất bại (bản ${ver})`, d.msg ? `Lỗi: ${d.msg}` : "");
+        break;
+      case "rollback":
+        otaLogAdd(`[OTA] chip rollback: ${d.msg || ""}`, "l-err");
+        otaLiveFinishUi(false, "Chip đã rollback về bản cũ", d.msg || "");
+        break;
+    }
+  }
+
+  function otaLogClassify(line) {
+    const l = line.toLowerCase();
+    if (/loi|that bai|failed|error|rollback|huy/.test(l)) return "l-err";
+    if (/thanh cong|da ket noi|on dinh|ok/.test(l)) return "l-ok";
+    return "";
+  }
+
+  const otaFwBoxEl = document.getElementById("otaFwBox");
+  const otaFwTitleEl = document.getElementById("otaFwTitle");
+  const otaFwSubEl = document.getElementById("otaFwSub");
+  const otaFwBtnEl = document.getElementById("otaFwBtn");
+
+  function otaFwShow(version, source) {
+    if (!version) return;
+    otaFwBoxEl.classList.add("done");
+    otaFwTitleEl.textContent = `Chip đang chạy: bản ${version}`;
+    otaFwSubEl.textContent = `Cập nhật lúc ${new Date().toLocaleTimeString("vi-VN")} · nguồn: ${source}`;
+  }
+
+  async function otaFwCheck() {
+    otaFwBtnEl.disabled = true;
+    otaFwSubEl.textContent = "Đang kiểm tra...";
+    try {
+      const res = await fetch(
+        workerBaseUrl + "/ota/checkin-status?deviceId=" + encodeURIComponent(otaDeviceId()),
+        { cache: "no-store", mode: "cors" }
+      );
+      const data = res.ok ? await res.json() : null;
+      if (data && data.version && data.status !== "none") {
+        otaFwBoxEl.classList.add("done");
+        otaFwTitleEl.textContent = `Firmware version: ${data.version}`;
+        const t = typeof data.ts === "number" ? new Date(data.ts).toLocaleString("vi-VN") : "";
+        otaFwSubEl.textContent = `Cập nhật lần cuối: ${t} · source: ESP32`;
+      } else if (!otaFwTitleEl.textContent.includes("bản ")) {
+        otaFwSubEl.textContent = "Chưa có thông tin, có thể đang offline";
+      } else {
+        otaFwSubEl.textContent += " (server chưa có dữ liệu mới)";
+      }
+    } catch (e) {
+      otaFwSubEl.textContent = "Không kiểm tra được, thử lại sau";
+    }
+    otaFwBtnEl.disabled = false;
+  }
+  otaFwBtnEl.addEventListener("click", otaFwCheck);
+
+  function otaMqttStart() {
+    if (otaMqttClient || typeof mqtt === "undefined") return;
+    const dev = otaDeviceId();
+    otaMqttClient = mqtt.connect("wss://f730af260a314bd6b762801931a0ed1e.s1.eu.hivemq.cloud:8884/mqtt", {
+      clean: true,
+      connectTimeout: 5000,
+      reconnectPeriod: 4000,
+      clientId: "WebSetting_" + Math.random().toString(16).substring(2, 10),
+      username: "waterlevel",
+      password: "waterlevel"
+    });
+    otaMqttClient.on("error", (e) => { otaLogAdd(`[WEB] MQTT lỗi: ${e && e.message ? e.message : e}`, "l-err"); });
+    otaMqttClient.on("close", () => { otaLogAdd("[WEB] MQTT mất kết nối, đang thử lại", "l-err"); });
+    otaMqttClient.on("connect", () => {
+      otaLogAdd("[WEB] MQTT đã kết nối", "l-ok");
+      otaMqttClient.subscribe(`waterlevel/${dev}/ota`);
+      otaMqttClient.subscribe(`waterlevel/${dev}/log`);
+      otaMqttClient.subscribe(`waterlevel/${dev}/info`);
+    });
+    otaMqttClient.on("message", (topic, message) => {
+      const text = message.toString();
+      if (topic.endsWith("/ota")) {
+        try { otaLiveHandle(JSON.parse(text)); } catch (e) {}
+      } else if (topic.endsWith("/log")) {
+        otaLogAdd(text, otaLogClassify(text));
+      } else if (topic.endsWith("/info")) {
+        try { otaFwShow(JSON.parse(text).version, "chip (MQTT)"); } catch (e) {}
+      }
+    });
+  }
+  if (typeof mqtt === "undefined") { otaLogAdd("[WEB] Không tải được thư viện MQTT", "l-err"); }
+  otaMqttStart();
+
   otaOpenBtnEl.addEventListener("click", () => {
     if (!workerBaseUrl) {
-      showNotice("Thiếu cấu hình", "Nhập URL Worker và bấm Kết nối trước.", "error");
+      showNotice("Chưa có URL Worker", "", "error");
       return;
     }
     otaModalEl.classList.add("open");
     deviceFilterEl.value = currentDeviceId;
     otaRefreshList();
+    otaFwCheck();
   });
   otaCloseBtnEl.addEventListener("click", () => otaModalEl.classList.remove("open"));
-  otaModalEl.addEventListener("click", (e) => { if (e.target === otaModalEl) otaModalEl.classList.remove("open"); });
 
-  otaDropEl.addEventListener("click", () => otaFileEl.click());
+  otaDropEl.addEventListener("click", (e) => { if (e.target !== otaFileEl) otaFileEl.click(); });
   ["dragenter", "dragover"].forEach(ev => otaDropEl.addEventListener(ev, e => {
     e.preventDefault(); otaDropEl.classList.add("drag");
   }));
@@ -1539,11 +1758,11 @@
 
   function otaSetFile(f) {
     if (!f.name.endsWith(".bin")) {
-      showNotice("File không hợp lệ", "Chỉ nhận file .bin.", "error");
+      showNotice("Chỉ nhận file .bin", "", "error");
       return;
     }
     otaSelectedFile = f;
-    otaDropEl.textContent = `Đã chọn: ${f.name} (${(f.size / 1024).toFixed(1)} KB)`;
+    otaDropTextEl.textContent = `Đã chọn: ${f.name} (${(f.size / 1024).toFixed(1)} KB)`;
     otaUploadBtnEl.disabled = !otaVersionEl.value.trim();
   }
   otaVersionEl.addEventListener("input", () => {
@@ -1553,7 +1772,7 @@
   otaUploadBtnEl.addEventListener("click", async () => {
     if (!otaSelectedFile || !otaVersionEl.value.trim()) return;
     if (!deviceKey) {
-      showNotice("Thiếu Device Key", "Cần nhập Device Key ở panel Kết nối Worker để tải firmware lên.", "error");
+      showNotice("Thiếu Device Key", "", "error");
       return;
     }
     otaUploadBtnEl.disabled = true;
@@ -1577,7 +1796,7 @@
       otaVersionEl.value = "";
       otaNoteEl.value = "";
       otaSelectedFile = null;
-      otaDropEl.textContent = "Kéo thả file .bin vào đây, hoặc bấm để chọn";
+      otaDropTextEl.textContent = OTA_DROP_TEXT;
       setTimeout(() => { otaProgressEl.style.display = "none"; otaProgressFillEl.style.width = "0%"; }, 500);
       otaRefreshList();
     } catch (e) {
@@ -1592,67 +1811,71 @@
     otaListEl.innerHTML = '<div class="ota-status-line">Đang tải...</div>';
     const deviceId = otaDeviceId();
     try {
-      const [listRes, activeRes] = await Promise.all([
-        fetch(workerBaseUrl + "/ota/list?deviceId=" + encodeURIComponent(deviceId)),
-        fetch(workerBaseUrl + "/ota/active?deviceId=" + encodeURIComponent(deviceId))
-      ]);
-      const list = await listRes.json();
-      const active = await activeRes.json();
+      const res = await fetch(workerBaseUrl + "/ota/list?deviceId=" + encodeURIComponent(deviceId));
+      const list = await res.json();
+      otaLastList = Array.isArray(list) ? list : [];
+      const activeIdx = otaLastList.findIndex(x => x.is_active);
 
-      otaDeviceStatusEl.textContent = active.active
-        ? `Đang chạy bản active: ${active.version} (device: ${deviceId})`
+      otaDeviceStatusEl.textContent = activeIdx >= 0
+        ? `Đang chạy bản active: ${otaLastList[activeIdx].version} (device: ${deviceId})`
         : `Chưa có bản nào được activate (device: ${deviceId})`;
 
-      if (!Array.isArray(list) || list.length === 0) {
-        otaListEl.innerHTML = '<div class="ota-status-line">Chưa có firmware nào được tải lên cho device này</div>';
+      if (otaLastList.length === 0) {
+        otaListEl.innerHTML = '<div class="ota-status-line">Chưa có firmware</div>';
         return;
       }
 
-      otaLastList = list;
-      const activeIdx = list.findIndex(x => x.is_active);
-      otaListEl.innerHTML = list.map((item, idx) => {
-        const isOlderThanActive = activeIdx >= 0 && idx > activeIdx;
+      otaListEl.innerHTML = otaLastList.map((item, idx) => {
+        const older = activeIdx >= 0 && idx > activeIdx;
+        const actions = item.is_active
+          ? `<button class="ota-btn-rollback" data-deact="${item.id}">Ngừng active</button>
+             <button class="ota-btn-delete" data-del="${item.id}" data-active="1">Xoá bản active</button>`
+          : `<button class="${older ? "ota-btn-rollback" : "ota-btn-activate"}" data-act="${item.id}">${older ? "Rollback về bản này" : "Dùng bản này"}</button>
+             <button class="ota-btn-delete" data-del="${item.id}">Xoá</button>`;
         return `
         <div class="ota-item ${item.is_active ? "active" : ""}">
           <div class="ota-item-top">
-            <span class="ota-version">${item.version}</span>
-            ${item.is_active ? '<span class="ota-badge">ACTIVE</span>' : ""}
+            <span class="ota-version">${otaEscape(String(item.version))}</span>
+            <span class="ota-item-side">
+              ${item.is_active ? '<span class="ota-badge">ACTIVE</span>' : ""}
+              <button class="ota-btn-detail" data-detail="${item.id}">Chi tiết</button>
+            </span>
           </div>
           ${item.note ? `<div class="ota-note">${otaEscape(item.note)}</div>` : ""}
           <div class="ota-meta">${new Date(item.uploaded_at).toLocaleString("vi-VN")} · ${(item.size / 1024).toFixed(1)} KB</div>
-          ${item.is_active
-            ? `
-          <div class="ota-item-actions">
-            <button class="ota-btn-rollback" data-deact="${item.id}">Ngừng active</button>
-            <button class="ota-btn-delete" data-del="${item.id}" data-active="1">Xoá bản active</button>
-          </div>`
-            : `
-          <div class="ota-item-actions">
-            <button class="${isOlderThanActive ? "ota-btn-rollback" : "ota-btn-activate"}" data-act="${item.id}">
-              ${isOlderThanActive ? "Rollback về bản này" : "Dùng bản này"}
-            </button>
-            <button class="ota-btn-delete" data-del="${item.id}">Xoá</button>
-          </div>`}
+          <div class="ota-item-actions">${actions}</div>
         </div>`;
       }).join("");
-
-      otaListEl.querySelectorAll("[data-act]").forEach(btn => {
-        btn.addEventListener("click", () => otaActivate(btn.dataset.act));
-      });
-      otaListEl.querySelectorAll("[data-del]").forEach(btn => {
-        btn.addEventListener("click", () => otaDelete(btn.dataset.del, btn.dataset.active === "1"));
-      });
-      otaListEl.querySelectorAll("[data-deact]").forEach(btn => {
-        btn.addEventListener("click", () => otaDeactivate(btn.dataset.deact));
-      });
     } catch (e) {
       otaListEl.innerHTML = '<div class="ota-status-line">Lỗi tải danh sách</div>';
     }
   }
 
+  otaListEl.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const d = b.dataset;
+    if (d.act) otaActivate(d.act);
+    else if (d.del) otaDelete(d.del, d.active === "1");
+    else if (d.deact) otaDeactivate(d.deact);
+    else if (d.detail) otaShowDetail(d.detail);
+  });
+
+  const otaDetailModalEl = document.getElementById("otaDetailModal");
+  document.getElementById("otaDetailCloseBtn").addEventListener("click", () => otaDetailModalEl.classList.remove("open"));
+
+  function otaShowDetail(id) {
+    const it = otaLastList.find(x => String(x.id) === String(id));
+    if (!it) return;
+    document.getElementById("otaDetailTitle").textContent = it.version + (it.is_active ? " · ACTIVE" : "");
+    document.getElementById("otaDetailMeta").textContent = `${new Date(it.uploaded_at).toLocaleString("vi-VN")} · ${(it.size / 1024).toFixed(1)} KB`;
+    document.getElementById("otaDetailNote").textContent = it.note || "Không có ghi chú";
+    otaDetailModalEl.classList.add("open");
+  }
+
   async function otaActivate(id) {
     if (!deviceKey) {
-      showNotice("Thiếu Device Key", "Cần nhập Device Key để đẩy firmware.", "error");
+      showNotice("Thiếu Device Key", "", "error");
       return;
     }
     try {
@@ -1662,7 +1885,7 @@
         body: JSON.stringify({ id: Number(id), deviceId: otaDeviceId() })
       });
       if (!res.ok) throw new Error(await res.text());
-      showNotice("Đã đẩy lên chip", "Chip sẽ tự tải và flash trong tối đa 20 giây tới.", "success");
+      showNotice("Đã gửi yêu cầu cập nhật", "", "success");
       const pushedItem = otaLastList.find(x => String(x.id) === String(id));
       otaCheckinStart(otaDeviceId(), pushedItem ? pushedItem.version : "");
       otaRefreshList();
@@ -1673,7 +1896,7 @@
 
   async function otaDeactivate(id) {
     if (!deviceKey) {
-      showNotice("Thiếu Device Key", "Cần nhập Device Key để ngừng active.", "error");
+      showNotice("Thiếu Device Key", "", "error");
       return;
     }
     try {
@@ -1683,7 +1906,7 @@
         body: JSON.stringify({ deviceId: otaDeviceId() })
       });
       if (!res.ok) throw new Error(await res.text());
-      showNotice("Đã ngừng active", "Chip sẽ không tự cập nhật OTA nữa cho tới khi bạn đẩy bản khác.", "success");
+      showNotice("Đã ngừng active", "", "success");
       otaRefreshList();
     } catch (e) {
       showNotice("Lỗi", e.message, "error");
@@ -1692,10 +1915,10 @@
 
   async function otaDelete(id, isActive) {
     if (!deviceKey) {
-      showNotice("Thiếu Device Key", "Cần nhập Device Key để xoá.", "error");
+      showNotice("Thiếu Device Key", "", "error");
       return;
     }
-    if (isActive && !confirm("Bản này đang ACTIVE. Xoá sẽ tự ngừng active rồi xoá luôn, chip sẽ không còn bản OTA nào để chạy nữa. Vẫn xoá?")) {
+    if (isActive && !confirm("Bản này đang ACTIVE. Vẫn xoá?")) {
       return;
     }
     try {
@@ -1725,12 +1948,6 @@
   const wifiSaveBtnEl = document.getElementById("wifiSaveBtn");
   const wifiMsgEl = document.getElementById("wifiMsg");
   const wifiUseApBtnEl = document.getElementById("wifiUseApBtn");
-  const wifiHelpBtnEl = document.getElementById("wifiHelpBtn");
-  const wifiHelpNoteEl = document.getElementById("wifiHelpNote");
-
-  wifiHelpBtnEl.addEventListener("click", () => {
-    wifiHelpNoteEl.style.display = wifiHelpNoteEl.style.display === "none" ? "block" : "none";
-  });
 
   wifiUseApBtnEl.addEventListener("click", () => {
     wifiDeviceIpEl.value = "192.168.4.1";
@@ -1749,28 +1966,22 @@
     return ip ? (ip.startsWith("http") ? ip : `http://${ip}`) : "";
   }
 
+  function setWifiBadge(color, text) {
+    wifiStatusBadgeEl.textContent = text;
+    wifiStatusBadgeEl.style.color = color;
+  }
+
   async function checkWifiStatus() {
     const base = getDeviceBaseUrl();
-    if (!base) {
-      wifiStatusBadgeEl.innerHTML = "Nhập IP thiết bị để kiểm tra...";
-      wifiStatusBadgeEl.style.color = "var(--muted)";
-      return;
-    }
-    wifiStatusBadgeEl.innerHTML = "Đang kiểm tra trạng thái...";
-    wifiStatusBadgeEl.style.color = "var(--text)";
+    if (!base) return setWifiBadge("var(--muted)", "Nhập IP thiết bị để kiểm tra...");
+    setWifiBadge("var(--text)", "Đang kiểm tra trạng thái...");
     try {
       const res = await fetch(base + "/wifi-status");
       const data = await res.json();
-      if (data.connected) {
-        wifiStatusBadgeEl.innerHTML = `<span class="dot" style="background:var(--safe);box-shadow:0 0 6px var(--safe);"></span> Đã kết nối: ${data.ssid} (${data.ip})`;
-        wifiStatusBadgeEl.style.color = "var(--safe)";
-      } else {
-        wifiStatusBadgeEl.innerHTML = `<span class="dot" style="background:var(--warn);box-shadow:0 0 6px var(--warn);"></span> Chưa kết nối WiFi`;
-        wifiStatusBadgeEl.style.color = "var(--warn)";
-      }
+      if (data.connected) setWifiBadge("var(--safe)", `Đã kết nối: ${data.ssid} (${data.ip})`);
+      else setWifiBadge("var(--warn)", "Chưa kết nối WiFi");
     } catch (e) {
-      wifiStatusBadgeEl.innerHTML = `<span class="dot" style="background:var(--danger);box-shadow:0 0 6px var(--danger);"></span> Lỗi kết nối đến IP thiết bị`;
-      wifiStatusBadgeEl.style.color = "var(--danger)";
+      setWifiBadge("var(--danger)", "Lỗi kết nối đến IP thiết bị");
     }
   }
 
@@ -1780,9 +1991,6 @@
   });
 
   wifiCloseBtnEl.addEventListener("click", () => wifiModalEl.classList.remove("open"));
-  wifiModalEl.addEventListener("click", (e) => {
-    if (e.target === wifiModalEl) wifiModalEl.classList.remove("open");
-  });
 
   wifiSaveBtnEl.addEventListener("click", async () => {
     const base = getDeviceBaseUrl();
@@ -1795,13 +2003,19 @@
       return;
     }
     if (!deviceKey) {
-      wifiMsgEl.textContent = "Cần nhập Device Key ở phần 'Kết nối Worker' trước";
+      wifiMsgEl.textContent = "Cần nhập Device Key";
       wifiMsgEl.style.color = "var(--warn)";
       return;
     }
     if (!ssid) {
       wifiMsgEl.textContent = "Cần nhập tên mạng WiFi";
       wifiMsgEl.style.color = "var(--warn)";
+      return;
+    }
+
+    if (location.protocol === "https:" && base.startsWith("http:")) {
+      wifiMsgEl.textContent = "Trang https không gọi được http tới thiết bị, hãy mở trang bằng http hoặc file local.";
+      wifiMsgEl.style.color = "var(--danger)";
       return;
     }
 
@@ -1817,11 +2031,12 @@
         },
         body: JSON.stringify({ ssid: ssid, password: pass })
       });
-      if (!res.ok) throw new Error("Lưu thất bại. Kiểm tra lại Device Key.");
-      wifiMsgEl.textContent = "Đã lưu! Thiết bị đang khởi động lại vào mạng mới.";
+      if (res.status === 401) throw new Error("Sai Device Key.");
+      if (!res.ok) throw new Error("Thiết bị từ chối cấu hình (mã " + res.status + ").");
+      wifiMsgEl.textContent = "Đã lưu, thiết bị đang khởi động lại.";
       wifiMsgEl.style.color = "var(--safe)";
     } catch (e) {
-      wifiMsgEl.textContent = e.message;
+      wifiMsgEl.textContent = e instanceof TypeError ? "Không kết nối được tới thiết bị." : e.message;
       wifiMsgEl.style.color = "var(--danger)";
     } finally {
       wifiSaveBtnEl.disabled = false;

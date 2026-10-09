@@ -1,8 +1,8 @@
 #ifndef SECRETS_H
 #define SECRETS_H
 
-#define WIFI_SSID         "Xom Tro Ba Nguyen"  
-#define WIFI_PASSWORD     "88888888"
+#define WIFI_SSID         "kinne"  
+#define WIFI_PASSWORD     "nyanya12345"
 #define DEVICE_KEY_SECRET "HCSR04"
 #define AP_PASSWORD       "08092006"
 
