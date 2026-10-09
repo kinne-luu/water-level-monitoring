@@ -2,7 +2,7 @@
 
 Đây là mã nguồn của đề tài báo cáo kỹ thuật môn Ứng dụng IoT. Hệ thống đo mực nước trong tầng hầm bằng cảm biến siêu âm, cảnh báo ngay tại chỗ bằng đèn, còi và màn hình LCD, đồng thời gửi dữ liệu lên đám mây để ban quản lý theo dõi và nhận tin nhắn khi có nguy hiểm.
 
-Điều quan trọng nhất trong thiết kế là thiết bị phải tự cảnh báo được ngay cả khi mất mạng. Mưa lớn thường làm đứt Wi-Fi đúng lúc nước dâng nhanh nhất, nên mọi phép tính liên quan đến an toàn đều chạy trên ESP32, còn đám mây chỉ lo việc lưu lịch sử và báo tin từ xa.
+Thiết bị tự cảnh báo được ngay cả khi mất mạng. Mưa lớn thường làm đứt Wi-Fi đúng lúc nước dâng nhanh nhất, nên mọi phép tính liên quan đến an toàn đều chạy trên ESP32, còn đám mây chỉ lo việc lưu lịch sử và báo tin từ xa.
 
 ## Hệ thống làm được gì
 
