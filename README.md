@@ -1,85 +1,110 @@
-# Hệ thống IoT giám sát ngập lụt tầng hầm gửi xe
+# Hệ thống IoT cảnh báo ngập tầng hầm gửi xe
 
-Đây là mã nguồn của đề tài báo cáo kỹ thuật môn Ứng dụng IoT. Hệ thống đo mực nước trong tầng hầm bằng cảm biến siêu âm, cảnh báo ngay tại chỗ bằng đèn, còi và màn hình LCD, đồng thời gửi dữ liệu lên đám mây để ban quản lý theo dõi và nhận tin nhắn khi có nguy hiểm.
+Dự án môn học Ứng dụng IoT: thiết bị giám sát mực nước tự động tại tầng hầm chung cư / bãi xe ngầm, sử dụng vi điều khiển ESP32 và cảm biến siêu âm HC-SR04, truyền dữ liệu thời gian thực và phát cảnh báo đa kênh.
 
-Điều quan trọng nhất trong thiết kế là thiết bị phải tự cảnh báo được ngay cả khi mất mạng. Mưa lớn thường làm đứt Wi-Fi đúng lúc nước dâng nhanh nhất, nên mọi phép tính liên quan đến an toàn đều chạy trên ESP32, còn đám mây chỉ lo việc lưu lịch sử và báo tin từ xa.
+---
 
-## Hệ thống làm được gì
+## 1. Bài toán và hướng giải quyết
 
-1. Đo khoảng cách từ cảm biến đến mặt nước mỗi giây một lần, lấy trung vị của ba lần đo rồi đưa qua bộ lọc trung bình trượt năm giá trị để loại nhiễu.
-2. Chia mực nước thành bốn mức: an toàn, phát hiện nước, trung bình và nguy hiểm. Mỗi mức tương ứng một trạng thái đèn LED, còi và nội dung trên LCD.
-3. Tính tốc độ biến thiên của mực nước theo cm mỗi phút để người trực biết nước đang dâng hay đang rút.
-4. Gửi dữ liệu thời gian thực qua MQTT lên giao diện web, lưu lịch sử đo vào cơ sở dữ liệu và gửi cảnh báo qua Telegram.
-5. Cho chỉnh ngưỡng cảnh báo từ xa trên giao diện web mà không cần nạp lại firmware.
-6. Cập nhật firmware qua mạng (OTA), tự quay về bản cũ nếu bản mới gặp lỗi.
-7. Báo lỗi riêng khi cảm biến không phản hồi, để không nhầm sự cố phần cứng với tình huống ngập thật.
+Ngập tầng hầm thường diễn ra rất nhanh khi mưa lớn vượt công suất thoát nước đô thị. Nhược điểm của các hệ thống phao cơ truyền thống là chỉ đóng/ngắt máy bơm cục bộ, dễ kẹt rác và không báo được tình trạng từ xa khi sự cố xảy ra vào ban đêm.
 
-## Kiến trúc
+Hệ thống này được thiết kế với tiêu chí quan trọng nhất: **cảnh báo tại chỗ phải độc lập hoàn toàn với Internet**.
+- Mọi logic đọc cảm biến, lọc nhiễu, tính tốc độ dâng và kích hoạt còi/đèn đều chạy trực tiếp trên ESP32.
+- Dù đứt cáp, mất Wi-Fi hay sập mạng đám mây, còi báo động và đèn LED tại tầng hầm vẫn hoạt động bình thường.
+- Hạ tầng Cloudflare và MQTT chỉ đóng vai trò truyền tin từ xa, lưu dữ liệu lịch sử và phục vụ giao diện quản lý.
 
-Hệ thống chia làm ba lớp.
+---
 
-| Lớp | Thành phần | Nhiệm vụ |
-|---|---|---|
-| Cảm biến và xử lý tại chỗ | ESP32, HC-SR04, LCD, LED, còi | Đo, lọc nhiễu, phân loại mức và cảnh báo tại chỗ |
-| Mạng | Wi-Fi (trạm khách và điểm phát sóng), MQTT qua TLS | Truyền dữ liệu lên đám mây, cho phép cấu hình trực tiếp khi mất mạng nội bộ |
-| Đám mây | HiveMQ Cloud, Cloudflare Workers, Cloudflare D1, Telegram Bot API | Phân phối dữ liệu thời gian thực, lưu lịch sử, cấp ngưỡng và firmware, chuyển cảnh báo |
+## 2. Các thành phần trong thư mục `src/`
 
-Bên trong ESP32, hai nhân chạy hai việc riêng. Một nhân lo đo, lọc và điều khiển còi đèn. Nhân còn lại lo mọi việc cần mạng. Nhờ vậy khi đường truyền chậm hoặc đứt, việc cảnh báo tại chỗ vẫn chạy đều.
+Thư mục `src/` chứa toàn bộ mã nguồn của cả thiết bị nhúng, dịch vụ đám mây và giao diện web:
 
-## Công nghệ sử dụng
+* **`main.cpp` (Firmware ESP32):**
+  - Chạy kiến trúc đa nhiệm (FreeRTOS) tách biệt trên 2 nhân vật lý của ESP32:
+    - **Core 1 (Real-time Task):** Bắn xung Trigger 10µs, đọc xung Echo, lấy trung vị 3 mẫu liên tiếp rồi đưa qua bộ đệm trung bình trượt 5 phần tử (Moving Average Filter). So sánh ngưỡng để điều khiển trực tiếp còi chip, 3 đèn LED (Xanh, Vàng, Đỏ) và xuất thông tin ra màn hình LCD 1602 (I2C).
+    - **Core 0 (Network Task):** Quản lý kết nối Wi-Fi (đồng thời chạy cả chế độ Station kết nối mạng tòa nhà và Access Point dự phòng), gửi telemetry qua MQTT (TLS port 8883), đẩy log và cảnh báo khẩn cấp lên Cloudflare Worker, đồng bộ ngưỡng cảnh báo từ xa và kiểm tra cập nhật OTA.
+  - Tích hợp Watchdog Timer phần cứng (Task WDT) và cơ chế phân vùng kép (Dual Partition OTA) tự động khôi phục firmware cũ nếu bản cập nhật mới bị crash hoặc không check-in thành công trong 36 giây.
 
-| Thành phần | Công nghệ |
-|---|---|
-| Vi điều khiển | ESP32 |
-| Cảm biến | HC-SR04 (siêu âm, không tiếp xúc với nước) |
-| Môi trường phát triển firmware | PlatformIO |
-| Truyền dữ liệu thời gian thực | MQTT qua TLS, broker HiveMQ Cloud |
-| Xử lý và lưu trữ trên đám mây | Cloudflare Workers, Cloudflare D1 |
-| Kênh cảnh báo | Telegram Bot API |
-| Giao diện web | HTML, CSS và JavaScript thuần |
+* **`worker.js` (Cloudflare Worker API):**
+  - Đóng vai trò backend Serverless trung tâm kết nối với cơ sở dữ liệu phân tán **Cloudflare D1**:
+    - `POST /alert`: Xác thực thiết bị qua header `X-Device-Key`, kích hoạt gửi tin nhắn cảnh báo đến nhóm Telegram qua Telegram Bot API khi phát hiện chuyển mức nước.
+    - `POST /log`: Nhận và ghi lịch sử quan trắc định kỳ / khi có biến động lớn vào bảng D1.
+    - `GET /get-settings` & `POST /setting-log`: Cung cấp và cập nhật cấu hình ngưỡng động (Nguy hiểm, Cảnh báo, Phát hiện, Chiều cao lắp đặt) mà không cần nạp lại code cho chip.
+    - `POST /ota/*`: Quản lý danh sách firmware, upload file `.bin` lên R2 bucket, kích hoạt phiên bản và ghi nhận trạng thái rollback/check-in của thiết bị.
 
-## Cấu trúc thư mục
+* **`index.html` (Dashboard giám sát thời gian thực):**
+  - Giao diện web trực quan dành cho ban quản lý tòa nhà, kết nối trực tiếp đến HiveMQ Cloud qua MQTT WebSocket để nhận dữ liệu từng giây.
+  - Hiển thị khoảng cách tức thời, tốc độ biến thiên nước ($cm/phút$), đồ thị kép (so sánh trực tiếp giá trị thô vs giá trị đã lọc nhiễu) và mô hình cắt lớp hồ chứa mô phỏng mức dâng trực quan.
+
+* **`setting.html` (Trang quản trị & Cấu hình thiết bị):**
+  - Giao diện quản lý chuyên sâu: cấu hình ngưỡng báo động từ xa, xem bảng lịch sử đo, xuất dữ liệu và quản lý các bản cập nhật firmware OTA.
+
+---
+
+## 3. Kiến trúc luồng dữ liệu
 
 ```
-water-level-monitoring/
-├── include/
-│   └── secrets.h
-├── lib/
-├── src/
-│   ├── main.cpp
-│   ├── index.html
-│   ├── setting.html
-│   └── settings.json
-├── platformio.ini
-└── .gitignore
+  [ Cảm biến HC-SR04 ]
+           │ (Echo / Trig)
+           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ESP32 (Dual Core)                        │
+│                                                             │
+│  [ Core 1: Xử lý tại chỗ ]        [ Core 0: Giao tiếp mạng ]│
+│  • Lấy mẫu trung vị 3 lần          • Wi-Fi STA + AP Fallback │
+│  • Lọc trung bình trượt 5 giá trị  • MQTT Client (TLS 8883) │
+│  • Tính tốc độ dâng (cm/phút)      • HTTP Client / REST API │
+│  • Điều khiển Còi + 3 LED + LCD    • Quản lý OTA Rollback   │
+└──────────────┬──────────────────────────────────┬───────────┘
+               │ (MQTT TLS)                       │ (HTTPS REST)
+               ▼                                  ▼
+      [ HiveMQ Cloud Broker ]            [ Cloudflare Worker ]
+               │ (WSS)                            │
+               ▼                     ┌────────────┴────────────┐
+       [ index.html ]                ▼                         ▼
+    (Dashboard Real-time)     [ Cloudflare D1 ]       [ Telegram Bot API ]
+                             (Lịch sử & Cấu hình)     (Báo động khẩn cấp)
 ```
 
-| Thư mục hoặc tệp | Nội dung |
-|---|---|
-| `include/secrets.h` | Thông tin nhạy cảm như tên và mật khẩu Wi-Fi, thông tin broker MQTT. Tệp này không được đưa lên Git |
-| `lib/` | Thư viện riêng của dự án, tách khỏi thư viện do PlatformIO quản lý |
-| `src/main.cpp` | Firmware chính cho ESP32 |
-| `src/index.html` | Trang giám sát mực nước theo thời gian thực |
-| `src/setting.html` | Trang cấu hình thiết bị và ngưỡng cảnh báo |
-| `src/settings.json` | Cấu hình cổng của máy chủ cục bộ, mặc định là 5501 |
-| `platformio.ini` | Khai báo board, framework, tốc độ nạp và thư viện cần dùng |
-| `.gitignore` | Loại `.pio/`, `.vscode/` và các tệp `.hex` khỏi Git |
+---
 
-## Chuẩn bị
+## 4. Yêu cầu cài đặt và vận hành
 
-Bạn cần có VS Code cùng extension PlatformIO IDE, cáp USB và driver phù hợp với board ESP32 đang dùng, và tiện ích Live Server (hoặc công cụ tương đương) để chạy các trang HTML ở cổng 5501.
+### Phần cứng
+- 1x Vi điều khiển ESP32 DevKit V1 (30 chân).
+- 1x Cảm biến siêu âm HC-SR04 (kèm trở chia áp/bảo vệ chân Echo nếu cần).
+- 1x Màn hình LCD 1602 kèm module I2C (địa chỉ mặc định `0x27`).
+- 3x Đèn LED (Đỏ, Vàng, Xanh) kèm điện trở hạn dòng 330Ω.
+- 1x Còi báo active buzzer 5V.
 
-## Cài đặt và chạy
+### Nạp Firmware cho ESP32
+1. Mở dự án bằng **Visual Studio Code** đã cài tiện ích **PlatformIO IDE**.
+2. Tạo file `include/confidential.h` (dựa trên mẫu cấu hình) và điền các thông số:
+   ```cpp
+   #define WIFI_SSID "Ten_Wifi"
+   #define WIFI_PASS "Mat_Khau"
+   #define MQTT_HOST "your-broker.hivemq.cloud"
+   #define MQTT_PORT 8883
+   #define MQTT_USER "your_user"
+   #define MQTT_PASS "your_pass"
+   #define DEVICE_KEY "ma_khoa_xac_thuc_thiet_bi"
+   ```
+3. Cắm cáp USB kết nối ESP32 với máy tính.
+4. Bấm **PlatformIO: Build** và **PlatformIO: Upload** để nạp firmware. Mở **Serial Monitor** ở baud rate `115200` để theo dõi tiến trình khởi động.
 
-1. Mở thư mục dự án bằng VS Code có cài PlatformIO. PlatformIO sẽ đọc `platformio.ini` và tự tải board package cùng các thư viện cần thiết.
-2. Tạo hoặc mở `include/secrets.h`, điền tên Wi-Fi, mật khẩu và thông tin broker MQTT.
-3. Cắm ESP32 vào máy, chọn Build rồi Upload để nạp `src/main.cpp`.
-4. Bật Live Server ở cổng 5501, sau đó mở `src/index.html` để theo dõi mực nước và `src/setting.html` để chỉnh cấu hình.
+### Triển khai Backend Cloudflare
+1. Đăng ký tài khoản Cloudflare và cài đặt công cụ CLI `wrangler`.
+2. Tạo cơ sở dữ liệu D1 và khởi tạo cấu trúc bảng (schema) cho bảng log và cấu hình.
+3. Deploy file `src/worker.js` lên Cloudflare Workers:
+   ```bash
+   npx wrangler deploy
+   ```
+4. Thiết lập các biến môi trường (`DEVICE_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) trong phần cài đặt của Worker.
 
-## Bảo mật
+---
 
-`include/secrets.h` chứa mật khẩu và khóa xác thực, vì vậy hãy chắc chắn nó đã nằm trong `.gitignore` trước khi đẩy mã lên kho công khai.
+## 5. Điểm lưu ý khi thử nghiệm
 
-## Tài liệu đi kèm
-
-Cơ sở lý thuyết, so sánh công nghệ, phân tích yêu cầu và thiết kế chi tiết của hệ thống nằm trong báo cáo kỹ thuật của đề tài. Mã nguồn trong kho này tương ứng với Chương 3 của báo cáo.
+- **Đặc thù cảm biến siêu âm:** Cảm biến đo khoảng cách từ trần/vị trí treo xuống mặt nước. Do đó, **khoảng cách đo được tỉ lệ nghịch với mực nước** (khoảng cách càng nhỏ tức nước dâng càng cao).
+- **Bộ lọc tín hiệu:** Khi thay đổi mực nước đột ngột, bộ lọc trung bình trượt 5 phần tử cần khoảng 3 đến 5 chu kỳ lấy mẫu để giá trị sau lọc bắt kịp hoàn toàn, giúp loại bỏ các tia phản xạ nhiễu hoặc gợn sóng bề mặt.
+- **Bảo mật:** Không commit file `include/confidential.h` lên các kho mã nguồn công khai.

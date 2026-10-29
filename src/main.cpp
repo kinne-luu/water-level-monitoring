@@ -73,7 +73,7 @@ class MirrorPrint : public Print {
 MirrorPrint mirrorSerial;
 #define Serial mirrorSerial
 
-#define FIRMWARE_VERSION "1.1.2"
+#define FIRMWARE_VERSION "1.1.3"
 #define ENABLE_OTA_VERSION_CHECK 1
 #define WDT_TIMEOUT_SEC 25
 #define BOOT_CONFIRM_WINDOW_MS 60000UL
