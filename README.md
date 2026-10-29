@@ -1,4 +1,4 @@
-# Water Level Monitoring (Hệ thống giám sát ngập lụt tầng hầm)
+# Hệ thống giám sát ngập lụt tầng hầm
 
 Mô hình hệ thống IoT cảnh báo ngập lụt tự động cho tầng hầm gửi xe, kết hợp xử lý biên trên ESP32 và truyền dữ liệu thời gian thực qua nền tảng Cloudflare Serverless & MQTT HiveMQ.
 
