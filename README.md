@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Hệ thống IoT cảnh báo ngập tầng hầm gửi xe
 
 Dự án môn học Ứng dụng IoT: thiết bị giám sát mực nước tự động tại tầng hầm chung cư / bãi xe ngầm, sử dụng vi điều khiển ESP32 và cảm biến siêu âm HC-SR04, truyền dữ liệu thời gian thực và phát cảnh báo đa kênh.
@@ -108,3 +109,6 @@ Thư mục `src/` chứa toàn bộ mã nguồn của cả thiết bị nhúng, 
 - **Đặc thù cảm biến siêu âm:** Cảm biến đo khoảng cách từ trần/vị trí treo xuống mặt nước. Do đó, **khoảng cách đo được tỉ lệ nghịch với mực nước** (khoảng cách càng nhỏ tức nước dâng càng cao).
 - **Bộ lọc tín hiệu:** Khi thay đổi mực nước đột ngột, bộ lọc trung bình trượt 5 phần tử cần khoảng 3 đến 5 chu kỳ lấy mẫu để giá trị sau lọc bắt kịp hoàn toàn, giúp loại bỏ các tia phản xạ nhiễu hoặc gợn sóng bề mặt.
 - **Bảo mật:** Không commit file `include/confidential.h` lên các kho mã nguồn công khai.
+=======
+nothing
+>>>>>>> 34c5f76a94dcf2f4d68951bf1e4d91a56854b60a
