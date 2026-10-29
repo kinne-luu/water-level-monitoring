@@ -109,7 +109,7 @@ Dự án được phân bổ thành 3 lớp độc lập:
   - `TELEGRAM_CHAT_ID`: ID nhóm chat nhận thông báo.
 
 ### 3. Vận hành giao diện Web
-- File `src/index.html` và `src/setting.html` có thể host trực tiếp trên Cloudflare Pages, GitHub Pages hoặc chạy local bằng tiện ích Live Server trong VS Code để theo dõi và tinh chỉnh hệ thống.
+- File `src/index.html` và `src/setting.html` có thể host trực tiếp trên Cloudflare Pages, GitHub Pages hoặc chạy local bằng extension Live Server trong VS Code để theo dõi và tinh chỉnh hệ thống.
 
 ---
 
