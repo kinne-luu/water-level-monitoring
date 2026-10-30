@@ -1,4 +1,4 @@
-# Water Level Monitoring (Hệ thống giám sát ngập lụt tầng hầm)
+# Hệ thống giám sát ngập lụt tầng hầm
 
 Mô hình hệ thống IoT cảnh báo ngập lụt tự động cho tầng hầm gửi xe, kết hợp xử lý biên trên ESP32 và truyền dữ liệu thời gian thực qua nền tảng Cloudflare Serverless & MQTT HiveMQ.
 
@@ -87,7 +87,7 @@ Dự án được phân bổ thành 3 lớp độc lập:
 
   #endif
   ```
-- Kết nối ESP32 với máy tính qua cổng USB, mở tab PlatformIO và chọn **Upload** để nạp chương trình.
+- Kết nối ESP32 với máy tính qua cổng USB, mở tab PlatformIO và chọn Upload để nạp chương trình.
 
 ### 2. Triển khai backend Cloudflare Worker
 - Yêu cầu môi trường đã cài sẵn [Node.js](https://nodejs.org/) và công cụ `wrangler`.
@@ -109,12 +109,12 @@ Dự án được phân bổ thành 3 lớp độc lập:
   - `TELEGRAM_CHAT_ID`: ID nhóm chat nhận thông báo.
 
 ### 3. Vận hành giao diện Web
-- File `src/index.html` và `src/setting.html` có thể host trực tiếp trên **Cloudflare Pages**, GitHub Pages hoặc chạy local bằng tiện ích Live Server trong VS Code để theo dõi và tinh chỉnh hệ thống.
+- File `src/index.html` và `src/setting.html` có thể host trực tiếp trên Cloudflare Pages, GitHub Pages hoặc chạy local bằng extension Live Server trong VS Code để theo dõi và tinh chỉnh hệ thống.
 
 ---
 
 ## Lưu ý kỹ thuật
 
-1. **Nguyên lý đo khoảng cách:** Cảm biến siêu âm được treo trên cao chiếu xuống mặt sàn. Vì vậy giá trị khoảng cách đo được **nghịch biến** với chiều cao mực nước (khoảng cách càng giảm tức nước đang dâng càng cao).
-2. **Độ trễ bộ lọc:** Bộ lọc trung bình trượt 5 phần tử giúp loại bỏ các tia phản xạ nhiễu bề mặt gợn sóng, nhưng sẽ tạo độ trễ khoảng 3 - 5 giây để bắt kịp giá trị khi mực nước thay đổi dạng bước nhảy (step change).
+1. **Nguyên lý đo khoảng cách:** Cảm biến siêu âm được treo trên cao chiếu xuống mặt sàn. Vì vậy giá trị khoảng cách đo được nghịch biến với chiều cao mực nước (khoảng cách càng giảm tức nước đang dâng càng cao).
+2. **Độ trễ bộ lọc:** Bộ lọc trung bình trượt 5 phần tử giúp loại bỏ các tia phản xạ nhiễu bề mặt gợn sóng, nhưng sẽ tạo độ trễ khoảng 3 - 5 giây để bắt kịp giá trị khi mực nước thay đổi dạng bước nhảy.
 3. **An toàn thông tin:** Tuyệt đối không commit các khóa bí mật trong `confidential.h` lên GitHub.
