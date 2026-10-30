@@ -1,114 +1,120 @@
-<<<<<<< HEAD
-# Hệ thống IoT cảnh báo ngập tầng hầm gửi xe
+# Water Level Monitoring (Hệ thống giám sát ngập lụt tầng hầm)
 
-Dự án môn học Ứng dụng IoT: thiết bị giám sát mực nước tự động tại tầng hầm chung cư / bãi xe ngầm, sử dụng vi điều khiển ESP32 và cảm biến siêu âm HC-SR04, truyền dữ liệu thời gian thực và phát cảnh báo đa kênh.
-
----
-
-## 1. Bài toán và hướng giải quyết
-
-Ngập tầng hầm thường diễn ra rất nhanh khi mưa lớn vượt công suất thoát nước đô thị. Nhược điểm của các hệ thống phao cơ truyền thống là chỉ đóng/ngắt máy bơm cục bộ, dễ kẹt rác và không báo được tình trạng từ xa khi sự cố xảy ra vào ban đêm.
-
-Hệ thống này được thiết kế với tiêu chí quan trọng nhất: **cảnh báo tại chỗ phải độc lập hoàn toàn với Internet**.
-- Mọi logic đọc cảm biến, lọc nhiễu, tính tốc độ dâng và kích hoạt còi/đèn đều chạy trực tiếp trên ESP32.
-- Dù đứt cáp, mất Wi-Fi hay sập mạng đám mây, còi báo động và đèn LED tại tầng hầm vẫn hoạt động bình thường.
-- Hạ tầng Cloudflare và MQTT chỉ đóng vai trò truyền tin từ xa, lưu dữ liệu lịch sử và phục vụ giao diện quản lý.
+Mô hình hệ thống IoT cảnh báo ngập lụt tự động cho tầng hầm gửi xe, kết hợp xử lý biên trên ESP32 và truyền dữ liệu thời gian thực qua nền tảng Cloudflare Serverless & MQTT HiveMQ.
 
 ---
 
-## 2. Các thành phần trong thư mục `src/`
+## Tính năng chính
 
-Thư mục `src/` chứa toàn bộ mã nguồn của cả thiết bị nhúng, dịch vụ đám mây và giao diện web:
-
-* **`main.cpp` (Firmware ESP32):**
-  - Chạy kiến trúc đa nhiệm (FreeRTOS) tách biệt trên 2 nhân vật lý của ESP32:
-    - **Core 1 (Real-time Task):** Bắn xung Trigger 10µs, đọc xung Echo, lấy trung vị 3 mẫu liên tiếp rồi đưa qua bộ đệm trung bình trượt 5 phần tử (Moving Average Filter). So sánh ngưỡng để điều khiển trực tiếp còi chip, 3 đèn LED (Xanh, Vàng, Đỏ) và xuất thông tin ra màn hình LCD 1602 (I2C).
-    - **Core 0 (Network Task):** Quản lý kết nối Wi-Fi (đồng thời chạy cả chế độ Station kết nối mạng tòa nhà và Access Point dự phòng), gửi telemetry qua MQTT (TLS port 8883), đẩy log và cảnh báo khẩn cấp lên Cloudflare Worker, đồng bộ ngưỡng cảnh báo từ xa và kiểm tra cập nhật OTA.
-  - Tích hợp Watchdog Timer phần cứng (Task WDT) và cơ chế phân vùng kép (Dual Partition OTA) tự động khôi phục firmware cũ nếu bản cập nhật mới bị crash hoặc không check-in thành công trong 36 giây.
-
-* **`worker.js` (Cloudflare Worker API):**
-  - Đóng vai trò backend Serverless trung tâm kết nối với cơ sở dữ liệu phân tán **Cloudflare D1**:
-    - `POST /alert`: Xác thực thiết bị qua header `X-Device-Key`, kích hoạt gửi tin nhắn cảnh báo đến nhóm Telegram qua Telegram Bot API khi phát hiện chuyển mức nước.
-    - `POST /log`: Nhận và ghi lịch sử quan trắc định kỳ / khi có biến động lớn vào bảng D1.
-    - `GET /get-settings` & `POST /setting-log`: Cung cấp và cập nhật cấu hình ngưỡng động (Nguy hiểm, Cảnh báo, Phát hiện, Chiều cao lắp đặt) mà không cần nạp lại code cho chip.
-    - `POST /ota/*`: Quản lý danh sách firmware, upload file `.bin` lên R2 bucket, kích hoạt phiên bản và ghi nhận trạng thái rollback/check-in của thiết bị.
-
-* **`index.html` (Dashboard giám sát thời gian thực):**
-  - Giao diện web trực quan dành cho ban quản lý tòa nhà, kết nối trực tiếp đến HiveMQ Cloud qua MQTT WebSocket để nhận dữ liệu từng giây.
-  - Hiển thị khoảng cách tức thời, tốc độ biến thiên nước ($cm/phút$), đồ thị kép (so sánh trực tiếp giá trị thô vs giá trị đã lọc nhiễu) và mô hình cắt lớp hồ chứa mô phỏng mức dâng trực quan.
-
-* **`setting.html` (Trang quản trị & Cấu hình thiết bị):**
-  - Giao diện quản lý chuyên sâu: cấu hình ngưỡng báo động từ xa, xem bảng lịch sử đo, xuất dữ liệu và quản lý các bản cập nhật firmware OTA.
+- **Đo khoảng cách không tiếp xúc:** Sử dụng cảm biến siêu âm HC-SR04, chu kỳ lấy mẫu 1 giây. Dữ liệu thô được lấy trung vị 3 lần đo liên tiếp và lọc nhiễu bằng bộ đệm trung bình trượt 5 mẫu.
+- **Xử lý độc lập tại chỗ:** Còi chip, cụm đèn 3 màu (Xanh / Vàng / Đỏ) và màn hình LCD 1602 (I2C) được điều khiển trực tiếp từ ESP32, đảm bảo cảnh báo tức thời ngay cả khi mất kết nối Internet.
+- **Tính toán tốc độ biến thiên:** Tính tốc độ nước dâng theo $cm/phút$ theo chu kỳ 5 giây để đánh giá nguy cơ và ước lượng thời gian chạm ngưỡng báo động.
+- **Giám sát thời gian thực:** Truyền dữ liệu telemetry lên broker HiveMQ Cloud qua giao thức MQTT bảo mật TLS (port 8883), cập nhật trực tiếp lên dashboard giao diện web.
+- **Cảnh báo khẩn cấp từ xa:** Tự động gửi thông báo chuyển mức nguy hiểm vào nhóm chat Telegram thông qua Cloudflare Worker và Telegram Bot API.
+- **Cấu hình & Đồng bộ ngưỡng động:** Cho phép quản trị viên thay đổi các ngưỡng cảnh báo từ xa trên web mà không cần nạp lại firmware.
+- **Cập nhật Firmware qua mạng (OTA):** Cơ chế phân vùng kép (Dual Partition) cho phép kiểm tra, tải bản cập nhật `.bin` từ xa và tự động quay về bản cũ (Rollback) nếu firmware mới bị lỗi/treo hệ thống.
 
 ---
 
-## 3. Kiến trúc luồng dữ liệu
+## Kiến trúc hệ thống
 
-```
-  [ Cảm biến HC-SR04 ]
-           │ (Echo / Trig)
-           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    ESP32 (Dual Core)                        │
-│                                                             │
-│  [ Core 1: Xử lý tại chỗ ]        [ Core 0: Giao tiếp mạng ]│
-│  • Lấy mẫu trung vị 3 lần          • Wi-Fi STA + AP Fallback │
-│  • Lọc trung bình trượt 5 giá trị  • MQTT Client (TLS 8883) │
-│  • Tính tốc độ dâng (cm/phút)      • HTTP Client / REST API │
-│  • Điều khiển Còi + 3 LED + LCD    • Quản lý OTA Rollback   │
-└──────────────┬──────────────────────────────────┬───────────┘
-               │ (MQTT TLS)                       │ (HTTPS REST)
-               ▼                                  ▼
-      [ HiveMQ Cloud Broker ]            [ Cloudflare Worker ]
-               │ (WSS)                            │
-               ▼                     ┌────────────┴────────────┐
-       [ index.html ]                ▼                         ▼
-    (Dashboard Real-time)     [ Cloudflare D1 ]       [ Telegram Bot API ]
-                             (Lịch sử & Cấu hình)     (Báo động khẩn cấp)
+Dự án được phân bổ thành 3 lớp độc lập:
+
+1. **Lớp cảm biến và xử lý tại chỗ:** 
+   - Vi điều khiển ESP32 chạy FreeRTOS chia 2 nhân vật lý:
+     - `Core 1`: Xử lý thời gian thực (đọc cảm biến, lọc nhiễu, so sánh ngưỡng, kích hoạt còi/đèn/LCD).
+     - `Core 0`: Xử lý tác vụ mạng (duy trì kết nối Wi-Fi, publish MQTT, gửi HTTP request, OTA).
+2. **Lớp mạng & trung gian:**
+   - Wi-Fi kép: Chế độ Station (STA) kết nối mạng tòa nhà + Access Point (AP) cục bộ dùng để kỹ thuật viên cấu hình khẩn cấp.
+   - Broker MQTT HiveMQ Cloud trung chuyển dữ liệu telemetry tới trình duyệt.
+3. **Lớp đám mây & Ứng dụng:**
+   - Cloudflare Workers xử lý logic backend không máy chủ.
+   - Cloudflare D1 (Serverless SQL) lưu trữ lịch sử quan trắc và nhật ký cấu hình.
+   - Telegram Bot API tiếp nhận và phân phối tin nhắn cảnh báo khẩn cấp.
+
+---
+
+## Cấu trúc thư mục mã nguồn
+
+```text
+├── include/
+│   └── confidential.h      # Khai báo cấu hình nhạy cảm (Wi-Fi, MQTT, Key) - không commit
+├── src/
+│   ├── main.cpp            # Firmware chính cho ESP32 (xử lý cảm biến, 2 luồng, MQTT, OTA)
+│   ├── worker.js           # Backend API chạy trên Cloudflare Workers (kết nối D1 & Telegram)
+│   ├── index.html          # Web dashboard theo dõi mực nước thời gian thực (MQTT WebSocket)
+│   ├── setting.html        # Trang quản trị cấu hình ngưỡng, xem log lịch sử và quản lý OTA
+│   └── settings.json       # File cấu hình phụ trợ
+├── platformio.ini          # Cấu hình môi trường biên dịch PlatformIO
+└── README.md
 ```
 
 ---
 
-## 4. Yêu cầu cài đặt và vận hành
+## Sơ đồ kết nối phần cứng
 
-### Phần cứng
-- 1x Vi điều khiển ESP32 DevKit V1 (30 chân).
-- 1x Cảm biến siêu âm HC-SR04 (kèm trở chia áp/bảo vệ chân Echo nếu cần).
-- 1x Màn hình LCD 1602 kèm module I2C (địa chỉ mặc định `0x27`).
-- 3x Đèn LED (Đỏ, Vàng, Xanh) kèm điện trở hạn dòng 330Ω.
-- 1x Còi báo active buzzer 5V.
-
-### Nạp Firmware cho ESP32
-1. Mở dự án bằng **Visual Studio Code** đã cài tiện ích **PlatformIO IDE**.
-2. Tạo file `include/confidential.h` (dựa trên mẫu cấu hình) và điền các thông số:
-   ```cpp
-   #define WIFI_SSID "Ten_Wifi"
-   #define WIFI_PASS "Mat_Khau"
-   #define MQTT_HOST "your-broker.hivemq.cloud"
-   #define MQTT_PORT 8883
-   #define MQTT_USER "your_user"
-   #define MQTT_PASS "your_pass"
-   #define DEVICE_KEY "ma_khoa_xac_thuc_thiet_bi"
-   ```
-3. Cắm cáp USB kết nối ESP32 với máy tính.
-4. Bấm **PlatformIO: Build** và **PlatformIO: Upload** để nạp firmware. Mở **Serial Monitor** ở baud rate `115200` để theo dõi tiến trình khởi động.
-
-### Triển khai Backend Cloudflare
-1. Đăng ký tài khoản Cloudflare và cài đặt công cụ CLI `wrangler`.
-2. Tạo cơ sở dữ liệu D1 và khởi tạo cấu trúc bảng (schema) cho bảng log và cấu hình.
-3. Deploy file `src/worker.js` lên Cloudflare Workers:
-   ```bash
-   npx wrangler deploy
-   ```
-4. Thiết lập các biến môi trường (`DEVICE_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) trong phần cài đặt của Worker.
+| Linh kiện | Chân linh kiện | Chân GPIO trên ESP32 | Ghi chú |
+| :--- | :--- | :--- | :--- |
+| **HC-SR04** | TRIG | GPIO 5 | Ngõ ra kích hoạt xung phát siêu âm (10µs) |
+| | ECHO | GPIO 18 | Ngõ vào đo thời gian sóng phản xạ |
+| **LCD 1602 (I2C)** | SDA | GPIO 21 (SDA) | Đường truyền dữ liệu I2C |
+| | SCL | GPIO 22 (SCL) | Xung nhịp đồng bộ I2C (địa chỉ mặc định `0x27`) |
+| **LED Xanh** | Anode (+) | GPIO 25 | Mức an toàn (nối tiếp trở hạn dòng 330Ω) |
+| **LED Vàng** | Anode (+) | GPIO 26 | Mức chú ý / phát hiện nước |
+| **LED Đỏ** | Anode (+) | GPIO 27 | Mức nguy hiểm |
+| **Còi báo (Buzzer)**| Cực dương (+) | GPIO 19 | Còi chip 5V cảnh báo mức nguy hiểm |
 
 ---
 
-## 5. Điểm lưu ý khi thử nghiệm
+## Hướng dẫn cài đặt & Triển khai
 
-- **Đặc thù cảm biến siêu âm:** Cảm biến đo khoảng cách từ trần/vị trí treo xuống mặt nước. Do đó, **khoảng cách đo được tỉ lệ nghịch với mực nước** (khoảng cách càng nhỏ tức nước dâng càng cao).
-- **Bộ lọc tín hiệu:** Khi thay đổi mực nước đột ngột, bộ lọc trung bình trượt 5 phần tử cần khoảng 3 đến 5 chu kỳ lấy mẫu để giá trị sau lọc bắt kịp hoàn toàn, giúp loại bỏ các tia phản xạ nhiễu hoặc gợn sóng bề mặt.
-- **Bảo mật:** Không commit file `include/confidential.h` lên các kho mã nguồn công khai.
-=======
-nothing
->>>>>>> 34c5f76a94dcf2f4d68951bf1e4d91a56854b60a
+### 1. Chuẩn bị môi trường nạp firmware
+- Cài đặt [Visual Studio Code](https://code.visualstudio.com/) và tiện ích mở rộng **PlatformIO IDE**.
+- Tạo file `include/confidential.h` với nội dung mẫu:
+  ```cpp
+  #ifndef CONFIDENTIAL_H
+  #define CONFIDENTIAL_H
+
+  #define WIFI_SSID "Ten_Wifi_Cua_Ban"
+  #define WIFI_PASS "Mat_Khau_Wifi"
+
+  #define MQTT_HOST "your-cluster.hivemq.cloud"
+  #define MQTT_PORT 8883
+  #define MQTT_USER "your_mqtt_username"
+  #define MQTT_PASS "your_mqtt_password"
+
+  #define DEVICE_KEY "khoa_bi_mat_dong_bo_voi_worker"
+
+  #endif
+  ```
+- Kết nối ESP32 với máy tính qua cổng USB, mở tab PlatformIO và chọn **Upload** để nạp chương trình.
+
+### 2. Triển khai backend Cloudflare Worker
+- Yêu cầu môi trường đã cài sẵn [Node.js](https://nodejs.org/) và công cụ `wrangler`.
+- Đăng nhập tài khoản Cloudflare:
+  ```bash
+  npx wrangler login
+  ```
+- Khởi tạo cơ sở dữ liệu Cloudflare D1 và liên kết vào file `wrangler.toml`:
+  ```bash
+  npx wrangler d1 create water-level-db
+  ```
+- Triển khai Worker:
+  ```bash
+  npx wrangler deploy src/worker.js
+  ```
+- Thiết lập các Secret trên Cloudflare Dashboard hoặc qua CLI:
+  - `DEVICE_KEY`: Khóa xác thực khớp với file `confidential.h`.
+  - `TELEGRAM_BOT_TOKEN`: Token bot lấy từ BotFather.
+  - `TELEGRAM_CHAT_ID`: ID nhóm chat nhận thông báo.
+
+### 3. Vận hành giao diện Web
+- File `src/index.html` và `src/setting.html` có thể host trực tiếp trên **Cloudflare Pages**, GitHub Pages hoặc chạy local bằng tiện ích Live Server trong VS Code để theo dõi và tinh chỉnh hệ thống.
+
+---
+
+## Lưu ý kỹ thuật
+
+1. **Nguyên lý đo khoảng cách:** Cảm biến siêu âm được treo trên cao chiếu xuống mặt sàn. Vì vậy giá trị khoảng cách đo được **nghịch biến** với chiều cao mực nước (khoảng cách càng giảm tức nước đang dâng càng cao).
+2. **Độ trễ bộ lọc:** Bộ lọc trung bình trượt 5 phần tử giúp loại bỏ các tia phản xạ nhiễu bề mặt gợn sóng, nhưng sẽ tạo độ trễ khoảng 3 - 5 giây để bắt kịp giá trị khi mực nước thay đổi dạng bước nhảy (step change).
+3. **An toàn thông tin:** Tuyệt đối không commit các khóa bí mật trong `confidential.h` lên GitHub.
